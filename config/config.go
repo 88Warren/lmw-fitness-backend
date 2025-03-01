@@ -31,7 +31,7 @@ func GetEnv(key string, fallback string) string {
 
 func SetupServer() *gin.Engine {
 	router := gin.Default()
-	router.Static("/images", "./uploads")
+	router.Static("/images", "./images")
 	// router.Use(middleware.DBMiddleware())
 	return router
 }
