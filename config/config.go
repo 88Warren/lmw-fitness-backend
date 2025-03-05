@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/laurawarren88/LMW_Fitness/controllers"
+	"github.com/laurawarren88/LMW_Fitness/middleware"
 	"github.com/laurawarren88/LMW_Fitness/routes"
 	"gorm.io/gorm"
 )
@@ -32,16 +33,16 @@ func GetEnv(key string, fallback string) string {
 func SetupServer() *gin.Engine {
 	router := gin.Default()
 	router.Static("/images", "./images")
-	// router.Use(middleware.DBMiddleware())
+	router.Use(middleware.DBMiddleware())
 	return router
 }
 
 func SetupHandlers(router *gin.Engine, db *gorm.DB) {
 	homeController := controllers.NewHomeController(db)
-	// 	placeController := controllers.NewPlaceController(db)
-	// 	userController := controllers.NewUserController(db)
+	blogController := controllers.NewBlogController(db)
+	userController := controllers.NewUserController(db)
 
 	routes.RegisterHomeRoutes(router, homeController)
-	// routes.RegisterPlaceRoutes(router, placeController)
-	// routes.RegisterUserRoutes(router, userController)
+	routes.RegisterBlogRoutes(router, blogController)
+	routes.RegisterUserRoutes(router, userController)
 }
