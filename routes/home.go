@@ -7,5 +7,5 @@ import (
 
 func RegisterHomeRoutes(router *gin.Engine, hc *controllers.HomeController) {
 	router.GET("/api/", hc.GetHome)
-	// router.POST("/api/contact", hc.HandleContactForm)
+	router.POST("/api/contact", hc.HandleContactForm)
 }
