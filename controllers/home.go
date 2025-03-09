@@ -2,8 +2,10 @@ package controllers
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 
@@ -34,7 +36,7 @@ func (hc *HomeController) GetHome(ctx *gin.Context) {
 }
 
 func (hc *HomeController) HandleContactForm(ctx *gin.Context) {
-	log.Println("Received contact form request")
+	// log.Println("Received contact form request")
 
 	var form ContactForm
 	if err := ctx.ShouldBindJSON(&form); err != nil {
@@ -43,14 +45,14 @@ func (hc *HomeController) HandleContactForm(ctx *gin.Context) {
 		return
 	}
 
-	log.Printf("Form data received: %+v", form)
-	log.Printf("reCAPTCHA token received: %s", form.Token)
+	// log.Printf("Form data received: %+v", form)
+	// log.Printf("reCAPTCHA token received: %s", form.Token)
 
-	// if !verifyRecaptcha(form.Token) {
-	// 	log.Printf("reCAPTCHA verification failed for token: %s", form.Token)
-	// 	ctx.JSON(http.StatusForbidden, gin.H{"error": "reCAPTCHA verification failed"})
-	// 	return
-	// }
+	if !verifyRecaptcha(form.Token) {
+		// log.Printf("reCAPTCHA verification failed for token: %s", form.Token)
+		ctx.JSON(http.StatusForbidden, gin.H{"error": "reCAPTCHA verification failed"})
+		return
+	}
 
 	err := sendEmail(form.Name, form.Email, form.Message)
 	if err != nil {
@@ -59,24 +61,23 @@ func (hc *HomeController) HandleContactForm(ctx *gin.Context) {
 		return
 	}
 
-	// Process form submission (e.g., store in DB, send email)
-	log.Printf("Contact form submitted: %+v\n", form)
+	// log.Printf("Contact form submitted: %+v\n", form)
 
 	ctx.JSON(http.StatusOK, gin.H{"status": "success", "message": "Message received!"})
 }
 
 func sendEmail(name, email, message string) error {
 
-	log.Printf("SMTP Config - Host: %s, Port: %s, From: %s, To: %s",
-		os.Getenv("SMTP_HOST"),
-		os.Getenv("SMTP_PORT"),
-		os.Getenv("SMTP_FROM"),
-		os.Getenv("SMTP_TO"))
+	// log.Printf("SMTP Config - Host: %s, Port: %s, From: %s, To: %s",
+	// 	os.Getenv("SMTP_HOST"),
+	// 	os.Getenv("SMTP_PORT"),
+	// 	os.Getenv("SMTP_FROM"),
+	// 	os.Getenv("SMTP_TO"))
 
 	m := gomail.NewMessage()
-	m.SetHeader("From", os.Getenv("SMTP_FROM")) // Sender email from environment variable
+	m.SetHeader("From", os.Getenv("SMTP_FROM"))
 	m.SetHeader("To", os.Getenv("SMTP_TO"))
-	m.SetHeader("Reply-To", email) // Recipient email
+	m.SetHeader("Reply-To", email)
 	m.SetHeader("Subject", "New Contact Form Submission")
 
 	m.SetBody("text/plain", "Name: "+name+"\nEmail: "+email+"\n\nMessage:\n"+message)
@@ -96,29 +97,36 @@ func sendEmail(name, email, message string) error {
 	return d.DialAndSend(m)
 }
 
-// func verifyRecaptcha(token string) bool {
-// 	secret := os.Getenv("RECAPTCHA_SECRET")
-// 	url := "https://www.google.com/recaptcha/api/siteverify"
-// 	// Use form values instead of JSON for the request
-// 	resp, err := http.PostForm(url, url.Values{
-// 		"secret":   []string{secret},
-// 		"response": []string{token},
-// 	})
-// 	if err != nil {
-// 		log.Printf("reCAPTCHA verification error: %v", err)
-// 		return false
-// 	}
-// 	defer resp.Body.Close()
+func verifyRecaptcha(token string) bool {
+	secret := os.Getenv("RECAPTCHA_SECRET")
+	verifyURL := "https://www.google.com/recaptcha/api/siteverify"
 
-// 	var result struct {
-// 		Success bool `json:"success"`
-// 	}
-// 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-// 		log.Printf("reCAPTCHA response decode error: %v", err)
-// 		return false
-// 	}
+	// log.Printf("Verifying reCAPTCHA with secret: %s, token: %s", secret, token)
 
-// 	// Add debug logging
-// 	log.Printf("reCAPTCHA verification result: %+v", result)
-// 	return result.Success
-// }
+	resp, err := http.PostForm(verifyURL, url.Values{
+		"secret":   {secret},
+		"response": {token},
+	})
+	if err != nil {
+		log.Printf("reCAPTCHA verification error: %v", err)
+		return false
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		Success     bool     `json:"success"`
+		ChallengeTs string   `json:"challenge_ts"`
+		Hostname    string   `json:"hostname"`
+		ErrorCodes  []string `json:"error-codes"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		log.Printf("reCAPTCHA response decode error: %v", err)
+		return false
+	}
+
+	// Add debug logging
+	// log.Printf("reCAPTCHA verification result: %+v", result)
+	// log.Printf("Using RECAPTCHA_SECRET: %s", secret)
+	return result.Success
+}
