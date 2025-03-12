@@ -1,4 +1,4 @@
-/uploads
+/tmp
 dist
 dist-ssr
 *.local
