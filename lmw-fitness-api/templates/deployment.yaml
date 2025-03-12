@@ -54,32 +54,32 @@ spec:
             cpu: "500m"
         envFrom:
         - configMapRef:
-            name: {{ .Release.Name }}-configmap-backend
+            name: {{ .Release.Name }}-backend-configmap
         env:
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ .Release.Name }}-secrets
+              name: {{ .Release.Name }}-backend-secrets
               key: DB_PASSWORD
         - name: SMTP_PASSWORD 
           valueFrom:
             secretKeyRef:
-              name: {{ .Release.Name }}-secrets
+              name: {{ .Release.Name }}-backend-secrets
               key: SMTP_PASSWORD
         - name: RECAPTCHA_SECRET
           valueFrom:
             secretKeyRef:
-              name: {{ .Release.Name }}-secrets
+              name: {{ .Release.Name }}-backend-secrets
               key: RECAPTCHA_SECRET
         - name: ACCESS_SECRET_KEY
           valueFrom:
             secretKeyRef:
-              name: {{ .Release.Name }}-secrets
+              name: {{ .Release.Name }}-backend-secrets
               key: ACCESS_SECRET_KEY
         - name: REFRESH_SECRET_KEY
           valueFrom:
             secretKeyRef:
-              name: {{ .Release.Name }}-secrets
+              name: {{ .Release.Name }}-backend-secrets
               key: REFRESH_SECRET_KEY
         readinessProbe:
           httpGet:

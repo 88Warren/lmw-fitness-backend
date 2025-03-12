@@ -13,8 +13,20 @@ import (
 )
 
 func LoadEnv() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file")
+	env := os.Getenv("GO_ENV")
+	var envFile string
+
+	if env == "production" {
+		envFile = ".env.production"
+	} else {
+		envFile = ".env.development"
+	}
+
+	err := godotenv.Load(envFile)
+	if err != nil {
+		log.Printf("Warning: No %s file found, relying on system environment variables", envFile)
+	} else {
+		log.Printf("Loaded environment variables from %s", envFile)
 	}
 }
 

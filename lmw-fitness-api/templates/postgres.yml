@@ -44,7 +44,7 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: Helm
   annotations:
-    meta.helm.sh/release-name: {{ .Release.Name }}-backend
+    meta.helm.sh/release-name: {{ .Release.Name }}-backend-deployment
     meta.helm.sh/release-namespace: {{ .Values.namespace }}
 spec:
   replicas: 1
@@ -72,17 +72,17 @@ spec:
         - name: POSTGRES_USER
           valueFrom:
             configMapKeyRef:
-              name: {{ .Release.Name }}-configmap-backend
+              name: {{ .Release.Name }}-backend-configmap
               key: DB_USER
         - name: POSTGRES_DB
           valueFrom:
             configMapKeyRef:
-              name: {{ .Release.Name }}-configmap-backend
+              name: {{ .Release.Name }}-backend-configmap
               key: DB_NAME
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ .Release.Name }}-secrets
+              name: {{ .Release.Name }}-backend-secrets
               key: DB_PASSWORD
         volumeMounts:
           - mountPath: /var/lib/postgresql/data

@@ -23,7 +23,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: lmwcode/lmw_fitness_api:v1.0.0
+    image: lmwcode/lmw_fitness_api:v3.0.0
     container_name: lmw_fitness_api
     depends_on:
       db:
@@ -45,7 +45,7 @@ services:
     networks:
       - lmw-fitness-network
     env_file:
-      - .env
+      - .env.production
     volumes:
     - .env:/app/.env
     restart: unless-stopped

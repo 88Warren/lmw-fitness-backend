@@ -1,11 +1,12 @@
 namespace: lmw-fitness
+GO_ENV: production
 
 api:
   port: 8082
 
 image:
   repository: lmwcode/lmw_fitness_api
-  tag: v1.0.0
+  tag: v3.0.0
   pullPolicy: Always
 
 replicaCount: 1
@@ -13,7 +14,6 @@ replicaCount: 1
 database:
   name: LMWfitness
   user: postgres
-  host: "{{ .Release.Name }}-postgres-service"
   port: 5432
   sslMode: disable
 
