@@ -1,0 +1,125 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: lmw-fitness-postgres-pvc
+  namespace: lmw-fitness
+  labels:
+    app: lmw-fitness-postgres-service
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    meta.helm.sh/release-name: LMW-fitness-backend
+    meta.helm.sh/release-namespace: lmw-fitness
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi  
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: lmw-fitness-postgres-pv
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    meta.helm.sh/release-name: LMW-fitness-backend
+    meta.helm.sh/release-namespace: lmw-fitness
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 1Gi  
+  accessModes:
+    - ReadWriteOnce  
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: "/mnt/data" 
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lmw-fitness-postgres-deployment
+  namespace: lmw-fitness
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    meta.helm.sh/release-name: LMW-fitness-backend
+    meta.helm.sh/release-namespace: lmw-fitness
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-lmw
+  template:
+    metadata:
+      labels:
+        app: lmw-fitness-postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:latest
+        ports:
+        - containerPort: 5432
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "1"
+        env:
+          - name: POSTGRES_USER
+            valueFrom:
+              secretKeyRef:
+                name: lmw-fitness-postgres-secret
+                key: POSTGRES_USER
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: lmw-fitness-postgres-secret
+                key: POSTGRES_PASSWORD
+          - name: POSTGRES_DB
+            valueFrom:
+              secretKeyRef:
+                name: lmw-fitness-postgres-secret
+                key: POSTGRES_DB
+        volumeMounts:
+          - mountPath: /var/lib/postgresql/data
+            name: postgres-storage
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: lmw-fitness-postgres-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lmw-fitness-postgres-service
+  namespace: lmw-fitness
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    meta.helm.sh/release-name: LMW-fitness-backend
+    meta.helm.sh/release-namespace: lmw-fitness
+spec:
+  selector:
+    app: lmw-fitness-postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+  type: ClusterIP

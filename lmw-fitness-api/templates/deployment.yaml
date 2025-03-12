@@ -1,0 +1,127 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lmw-fitness-backend-deployment
+  namespace: lmw-fitness
+  labels:
+    app: backend
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    meta.helm.sh/release-name: LMW-fitness-backend
+    meta.helm.sh/release-namespace: lmw-fitness
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox
+        command: ['sh', '-c', 'until nc -z postgres-lmw-service 5432; do echo waiting for postgres; sleep 2; done;']
+      containers:
+      - name: backend
+        image: lmwcode/lmw_fitness_api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8082
+          name: http
+          protocol: TCP
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        env:
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: lmw-fitness-postgres-secret
+              key: POSTGRES_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: lmw-fitness-postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-lmw-secret
+              key: POSTGRES_DB
+
+        - name: PORT
+          valueFrom:
+            secretKeyRef:
+              name: lmw-fitness-port-secret
+              key: PORT
+        
+        - name: ACCESS_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: lmw-fitness-jwt-secret
+              key: ACCESS_SECRET_KEY
+              
+        - name: REFRESH_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: lmw-fitness-jwt-secret
+              key: REFRESH_SECRET_KEY
+        
+        - name: ENV
+          valueFrom:
+            secretKeyRef:
+              name: lmw-fitness-cookie-secret
+              key: ENV
+        - name: DEV_DOMAIN
+          valueFrom:
+            secretKeyRef:
+              name: cookie-lmw-secret
+              key: DEV_DOMAIN
+        - name: DEV_SECURE_COOKIE
+          valueFrom:
+            secretKeyRef:
+              name: lmw-fitness-cookie-secret
+              key: DEV_SECURE_COOKIE
+        - name: DEV_HTTP_ONLY_COOKIE
+          valueFrom:
+            secretKeyRef:
+              name: lmw-fitness-cookie-secret
+              key: DEV_HTTP_ONLY_COOKIE
+        - name: PROD_DOMAIN
+          valueFrom:
+            secretKeyRef:
+              name: lmw-fitness-cookie-secret
+              key: PROD_DOMAIN
+        - name: PROD_SECURE_COOKIE
+          valueFrom:
+            secretKeyRef:
+              name: lmw-fitness-cookie-secret
+              key: PROD_SECURE_COOKIE
+        - name: PROD_HTTP_ONLY_COOKIE
+          valueFrom:
+            secretKeyRef:
+              name: lmw-fitness-cookie-secret
+              key: PROD_HTTP_ONLY_COOKIE
+        
+        readinessProbe:
+          httpGet:
+            path: /api/
+            port: 8082
+          initialDelaySeconds: 5
+          timeoutSeconds: 10
+          periodSeconds: 120
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /api/
+            port: 8082
+          initialDelaySeconds: 5
+          timeoutSeconds: 10
+          periodSeconds: 120
+          failureThreshold: 3

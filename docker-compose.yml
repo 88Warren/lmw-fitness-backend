@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:latest
+    container_name: lmw_fitness_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Renegade187!
+      POSTGRES_DB: LMWfitness
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - lmw-fitness-network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: lmwcode/lmw_fitness_api:latest
+    container_name: lmw_fitness_api
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_USER: postgres
+      DB_PASSWORD: Renegade187!
+      DB_NAME: LMWfitness
+      DB_PORT: 5432
+    ports:
+      - "8082:8082"
+    networks:
+      - lmw-fitness-network
+
+networks:
+  lmw-fitness-network:
+    driver: bridge
+
+volumes:
+  db-data:
