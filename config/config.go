@@ -39,10 +39,6 @@ func SetupServer() *gin.Engine {
 
 func SetupHandlers(router *gin.Engine, db *gorm.DB) {
 	homeController := controllers.NewHomeController(db)
-	blogController := controllers.NewBlogController(db)
-	userController := controllers.NewUserController(db)
 
 	routes.RegisterHomeRoutes(router, homeController)
-	routes.RegisterBlogRoutes(router, blogController)
-	routes.RegisterUserRoutes(router, userController)
 }

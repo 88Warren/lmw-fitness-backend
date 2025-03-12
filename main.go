@@ -17,10 +17,6 @@ func main() {
 	database.ConnectToDB()
 	db := database.GetDB()
 
-	if err := database.SetupAdminUser(db); err != nil {
-		log.Printf("Error setting up admin user: %v", err)
-	}
-
 	router := config.SetupServer()
 
 	config.SetupHandlers(router, db)

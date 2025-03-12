@@ -25,7 +25,7 @@ spec:
         command: ['sh', '-c', 'until nc -z postgres-lmw-service 5432; do echo waiting for postgres; sleep 2; done;']
       containers:
       - name: backend
-        image: lmwcode/lmw_fitness_api:latest
+        image: lmwcode/lmw_fitness_api:v1.0.0
         imagePullPolicy: Always
         ports:
         - containerPort: 8082
@@ -38,76 +38,39 @@ spec:
           limits:
             memory: "128Mi"
             cpu: "500m"
+        envFrom:
+        - configMapRef:
+            name: lmw-fitness-configmap-backend
         env:
-        - name: DB_USER
+         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: lmw-fitness-postgres-secret
-              key: POSTGRES_USER
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: lmw-fitness-postgres-secret
-              key: POSTGRES_PASSWORD
-        - name: DB_NAME
-          valueFrom:
-            secretKeyRef:
-              name: postgres-lmw-secret
-              key: POSTGRES_DB
+              name: lmw-fitness-secrets
+              key: DB_PASSWORD
 
-        - name: PORT
+        - name: SMTP_PASSWORD 
           valueFrom:
             secretKeyRef:
-              name: lmw-fitness-port-secret
-              key: PORT
+              name: lmw-fitness-secrets
+              key: SMTP_PASSWORD
+
+        - name: RECAPTCHA_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: lmw-fitness-secrets
+              key: RECAPTCHA_SECRET
         
         - name: ACCESS_SECRET_KEY
           valueFrom:
             secretKeyRef:
-              name: lmw-fitness-jwt-secret
+              name: lmw-fitness-secrets
               key: ACCESS_SECRET_KEY
-              
+
         - name: REFRESH_SECRET_KEY
           valueFrom:
             secretKeyRef:
-              name: lmw-fitness-jwt-secret
+              name: lmw-fitness-secrets
               key: REFRESH_SECRET_KEY
-        
-        - name: ENV
-          valueFrom:
-            secretKeyRef:
-              name: lmw-fitness-cookie-secret
-              key: ENV
-        - name: DEV_DOMAIN
-          valueFrom:
-            secretKeyRef:
-              name: cookie-lmw-secret
-              key: DEV_DOMAIN
-        - name: DEV_SECURE_COOKIE
-          valueFrom:
-            secretKeyRef:
-              name: lmw-fitness-cookie-secret
-              key: DEV_SECURE_COOKIE
-        - name: DEV_HTTP_ONLY_COOKIE
-          valueFrom:
-            secretKeyRef:
-              name: lmw-fitness-cookie-secret
-              key: DEV_HTTP_ONLY_COOKIE
-        - name: PROD_DOMAIN
-          valueFrom:
-            secretKeyRef:
-              name: lmw-fitness-cookie-secret
-              key: PROD_DOMAIN
-        - name: PROD_SECURE_COOKIE
-          valueFrom:
-            secretKeyRef:
-              name: lmw-fitness-cookie-secret
-              key: PROD_SECURE_COOKIE
-        - name: PROD_HTTP_ONLY_COOKIE
-          valueFrom:
-            secretKeyRef:
-              name: lmw-fitness-cookie-secret
-              key: PROD_HTTP_ONLY_COOKIE
         
         readinessProbe:
           httpGet:
