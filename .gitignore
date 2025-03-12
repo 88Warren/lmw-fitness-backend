@@ -8,4 +8,4 @@ dist-ssr
 
 /lmw-fitness-api/templates/secrets.yaml
 /lmw-fitness-api/templates/configmap.yaml
-.env
+.env.*

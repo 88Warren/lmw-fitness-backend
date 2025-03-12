@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: lmw-fitness-postgres-pvc
-  namespace: lmw-fitness
+  name: {{ .Release.Name }}-postgres-pvc
+  namespace: {{ .Values.namespace }}
   labels:
-    app: lmw-fitness-postgres-service
+    app: {{ .Release.Name }}-postgres-service
     app.kubernetes.io/managed-by: Helm
   annotations:
-    meta.helm.sh/release-name: LMW-fitness-backend
-    meta.helm.sh/release-namespace: lmw-fitness
+    meta.helm.sh/release-name: {{ .Release.Name }}-backend-deployment
+    meta.helm.sh/release-namespace: {{ .Values.namespace }}
 spec:
   storageClassName: manual
   accessModes:
@@ -20,12 +20,12 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: lmw-fitness-postgres-pv
+  name: {{ .Release.Name }}-postgres-pv
   labels:
     app.kubernetes.io/managed-by: Helm
   annotations:
-    meta.helm.sh/release-name: LMW-fitness-backend
-    meta.helm.sh/release-namespace: lmw-fitness
+    meta.helm.sh/release-name: {{ .Release.Name }}-backend-deployment
+    meta.helm.sh/release-namespace: {{ .Values.namespace }}
 spec:
   storageClassName: manual
   capacity:
@@ -39,102 +39,94 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: lmw-fitness-postgres-deployment
-  namespace: lmw-fitness
+  name: {{ .Release.Name }}-postgres-deployment
+  namespace: {{ .Values.namespace }}
   labels:
     app.kubernetes.io/managed-by: Helm
   annotations:
-    meta.helm.sh/release-name: LMW-fitness-backend
-    meta.helm.sh/release-namespace: lmw-fitness
+    meta.helm.sh/release-name: {{ .Release.Name }}-backend
+    meta.helm.sh/release-namespace: {{ .Values.namespace }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: lmw-fitness-postgres
+      app: {{ .Release.Name }}-postgres
   template:
     metadata:
       labels:
-        app: lmw-fitness-postgres
+        app: {{ .Release.Name }}-postgres
     spec:
       containers:
       - name: postgres
         image: postgres:latest
         ports:
-        - containerPort: 5432
+        - containerPort: {{ .Values.database.port }}
         resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
           limits:
             memory: "512Mi"
-            cpu: "1"
+            cpu: "500m"
         env:
-        - name: DB_HOST
+        - name: POSTGRES_USER
           valueFrom:
             configMapKeyRef:
-              name: lmw-fitness-configmap-backend
-              key: DB_HOST
-        - name: DB_USER
-          valueFrom:
-            configMapKeyRef:
-              name: lmw-fitness-configmap-backend
+              name: {{ .Release.Name }}-configmap-backend
               key: DB_USER
-        - name: DB_NAME
+        - name: POSTGRES_DB
           valueFrom:
             configMapKeyRef:
-              name: lmw-fitness-configmap-backend
+              name: {{ .Release.Name }}-configmap-backend
               key: DB_NAME
-        - name: DB_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: lmw-fitness-configmap-backend
-              key: DB_PORT
-        - name: DB_SSLMODE
-          valueFrom:
-            configMapKeyRef:
-              name: lmw-fitness-configmap-backend
-              key: DB_SSLMODE
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: lmw-fitness-secrets
+              name: {{ .Release.Name }}-secrets
               key: DB_PASSWORD
         volumeMounts:
           - mountPath: /var/lib/postgresql/data
             name: postgres-storage
+            subPath: postgres
         livenessProbe:
           exec:
             command:
             - pg_isready
             - -U
             - postgres
-          initialDelaySeconds: 10
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
           periodSeconds: 10
+          failureThreshold: 3
         readinessProbe:
           exec:
             command:
             - pg_isready
             - -U
             - postgres
-          initialDelaySeconds: 5
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
           periodSeconds: 10
       volumes:
         - name: postgres-storage
           persistentVolumeClaim:
-            claimName: lmw-fitness-postgres-pvc
+            claimName: {{ .Release.Name }}-postgres-pvc
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: lmw-fitness-postgres-service
-  namespace: lmw-fitness
+  name: {{ .Release.Name }}-postgres-service
+  namespace: {{ .Values.namespace }}
   labels:
     app.kubernetes.io/managed-by: Helm
   annotations:
-    meta.helm.sh/release-name: LMW-fitness-backend
-    meta.helm.sh/release-namespace: lmw-fitness
+    meta.helm.sh/release-name: {{ .Release.Name }}-backend-deployment
+    meta.helm.sh/release-namespace: {{ .Values.namespace }}
 spec:
   selector:
-    app: lmw-fitness-postgres
+    app: {{ .Release.Name }}-postgres
   ports:
-  - port: 5432
-    targetPort: 5432
+  - port: {{ .Values.database.port }}
+    targetPort: {{  .Values.database.port }}
     protocol: TCP
   type: ClusterIP

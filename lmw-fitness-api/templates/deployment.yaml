@@ -1,28 +1,35 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: lmw-fitness-backend-deployment
-  namespace: lmw-fitness
+  name: {{ .Release.Name }}-backend-deployment
+  namespace: {{ .Values.namespace }}
   labels:
     app: backend
     app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/name: backend
   annotations:
-    meta.helm.sh/release-name: LMW-fitness-backend
-    meta.helm.sh/release-namespace: lmw-fitness
+    meta.helm.sh/release-name: {{ .Release.Name }}-backend-deployment
+    meta.helm.sh/release-namespace: {{ .Values.namespace }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
       app: backend
+      app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
       labels:
         app: backend
+        app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       initContainers:
       - name: wait-for-postgres
         image: busybox
-        command: ['sh', '-c', 'until nc -z lmw-fitness-postgres-service 5432; do echo waiting for postgres; sleep 2; done;']
+        command: 
+        - "sh"
+        - "-c"
+        - "until nc -z {{ .Release.Name }}-postgres-service {{ .Values.database.port }}; do echo waiting for postgres; sleep 2; done;"
         resources:
           requests:
             memory: "32Mi"
@@ -32,10 +39,10 @@ spec:
             cpu: "200m"
       containers:
       - name: backend
-        image: lmwcode/lmw_fitness_api:v1.0.0
-        imagePullPolicy: Always
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
         ports:
-        - containerPort: 8082
+        - containerPort: {{ .Values.api.port }}
           name: http
           protocol: TCP
         resources:
@@ -47,45 +54,44 @@ spec:
             cpu: "500m"
         envFrom:
         - configMapRef:
-            name: lmw-fitness-configmap-backend
+            name: {{ .Release.Name }}-configmap-backend
         env:
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: lmw-fitness-secrets
+              name: {{ .Release.Name }}-secrets
               key: DB_PASSWORD
         - name: SMTP_PASSWORD 
           valueFrom:
             secretKeyRef:
-              name: lmw-fitness-secrets
+              name: {{ .Release.Name }}-secrets
               key: SMTP_PASSWORD
         - name: RECAPTCHA_SECRET
           valueFrom:
             secretKeyRef:
-              name: lmw-fitness-secrets
+              name: {{ .Release.Name }}-secrets
               key: RECAPTCHA_SECRET
         - name: ACCESS_SECRET_KEY
           valueFrom:
             secretKeyRef:
-              name: lmw-fitness-secrets
+              name: {{ .Release.Name }}-secrets
               key: ACCESS_SECRET_KEY
         - name: REFRESH_SECRET_KEY
           valueFrom:
             secretKeyRef:
-              name: lmw-fitness-secrets
+              name: {{ .Release.Name }}-secrets
               key: REFRESH_SECRET_KEY
         readinessProbe:
           httpGet:
             path: /api/
-            port: 8082
+            port: {{ .Values.api.port }}
           initialDelaySeconds: 5
           timeoutSeconds: 10
           periodSeconds: 120
-          failureThreshold: 3
         livenessProbe:
           httpGet:
             path: /api/
-            port: 8082
+            port: {{ .Values.api.port }}
           initialDelaySeconds: 5
           timeoutSeconds: 10
           periodSeconds: 120
