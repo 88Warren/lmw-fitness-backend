@@ -22,7 +22,14 @@ spec:
       initContainers:
       - name: wait-for-postgres
         image: busybox
-        command: ['sh', '-c', 'until nc -z postgres-lmw-service 5432; do echo waiting for postgres; sleep 2; done;']
+        command: ['sh', '-c', 'until nc -z lmw-fitness-postgres-service 5432; do echo waiting for postgres; sleep 2; done;']
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "100m"
+          limits:
+            memory: "64Mi"
+            cpu: "200m"
       containers:
       - name: backend
         image: lmwcode/lmw_fitness_api:v1.0.0
@@ -42,36 +49,31 @@ spec:
         - configMapRef:
             name: lmw-fitness-configmap-backend
         env:
-         - name: DB_PASSWORD
+        - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
               name: lmw-fitness-secrets
               key: DB_PASSWORD
-
         - name: SMTP_PASSWORD 
           valueFrom:
             secretKeyRef:
               name: lmw-fitness-secrets
               key: SMTP_PASSWORD
-
         - name: RECAPTCHA_SECRET
           valueFrom:
             secretKeyRef:
               name: lmw-fitness-secrets
               key: RECAPTCHA_SECRET
-        
         - name: ACCESS_SECRET_KEY
           valueFrom:
             secretKeyRef:
               name: lmw-fitness-secrets
               key: ACCESS_SECRET_KEY
-
         - name: REFRESH_SECRET_KEY
           valueFrom:
             secretKeyRef:
               name: lmw-fitness-secrets
               key: REFRESH_SECRET_KEY
-        
         readinessProbe:
           httpGet:
             path: /api/

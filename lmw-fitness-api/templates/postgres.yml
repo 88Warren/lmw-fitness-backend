@@ -50,7 +50,7 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: postgres-lmw
+      app: lmw-fitness-postgres
   template:
     metadata:
       labels:
@@ -68,30 +68,30 @@ spec:
         env:
         - name: DB_HOST
           valueFrom:
-            configMapRef:
+            configMapKeyRef:
               name: lmw-fitness-configmap-backend
               key: DB_HOST
         - name: DB_USER
           valueFrom:
-            configMapRef:
+            configMapKeyRef:
               name: lmw-fitness-configmap-backend
               key: DB_USER
         - name: DB_NAME
           valueFrom:
-            configMapRef:
+            configMapKeyRef:
               name: lmw-fitness-configmap-backend
               key: DB_NAME
         - name: DB_PORT
           valueFrom:
-            configMapRef:
+            configMapKeyRef:
               name: lmw-fitness-configmap-backend
               key: DB_PORT
         - name: DB_SSLMODE
           valueFrom:
-            configMapRef:
+            configMapKeyRef:
               name: lmw-fitness-configmap-backend
               key: DB_SSLMODE
-        - name: DB_PASSWORD
+        - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
               name: lmw-fitness-secrets
