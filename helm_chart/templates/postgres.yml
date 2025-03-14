@@ -48,7 +48,7 @@ metadata:
     meta.helm.sh/release-name: {{ .Release.Name }}-backend-deployment
     meta.helm.sh/release-namespace: {{ .Values.namespace }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
       app: {{ .Release.Name }}-postgres
@@ -129,4 +129,4 @@ spec:
   - port: {{ .Values.database.port }}
     targetPort: {{  .Values.database.port }}
     protocol: TCP
-  type: ClusterIP
+  type: {{ .Values.database.type }}

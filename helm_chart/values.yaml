@@ -3,6 +3,10 @@ GO_ENV: production
 
 api:
   port: 8082
+  type: NodePort  
+  nodePort: 30260
+  path: /api/
+  pathType: ImplementationSpecific
 
 image:
   repository: lmwcode/lmw_fitness_api
@@ -15,6 +19,7 @@ database:
   name: LMWfitness
   user: postgres
   port: 5432
+  type: ClusterIP
   sslMode: disable
 
 storage:
@@ -26,3 +31,14 @@ smtp:
   username: info@lmwfitness.co.uk
   from: info@lmwfitness.co.uk
   to: info@lmwfitness.co.uk
+
+livenessProbe:
+  initialDelaySeconds: 30
+  timeoutSeconds: 5
+  periodSeconds: 10
+  failureThreshold: 3
+readinessProbe:
+  initialDelaySeconds: 15
+  timeoutSeconds: 5
+  periodSeconds: 10
+  failureThreshold: 3

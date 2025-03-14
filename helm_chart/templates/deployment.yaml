@@ -83,14 +83,14 @@ spec:
               key: REFRESH_SECRET_KEY
         readinessProbe:
           httpGet:
-            path: /api/
+            path: {{ .Values.api.path }}
             port: {{ .Values.api.port }}
           initialDelaySeconds: 5
           timeoutSeconds: 10
           periodSeconds: 120
         livenessProbe:
           httpGet:
-            path: /api/
+            path: {{ .Values.api.path }}
             port: {{ .Values.api.port }}
           initialDelaySeconds: 5
           timeoutSeconds: 10
