@@ -6,7 +6,7 @@ api:
 
 image:
   repository: lmwcode/lmw_fitness_api
-  tag: v3.0.0
+  tag: v4.0.0
   pullPolicy: Always
 
 replicaCount: 1
@@ -16,6 +16,9 @@ database:
   user: postgres
   port: 5432
   sslMode: disable
+
+storage:
+  storageClass: standard
 
 smtp:
   host: smtp.ionos.co.uk

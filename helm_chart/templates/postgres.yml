@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ .Release.Name }}-postgres-pvc
+  name: {{ .Release.Name }}-postgres-pvc-v2
   namespace: {{ .Values.namespace }}
   labels:
     app: {{ .Release.Name }}-postgres-service
@@ -10,7 +10,8 @@ metadata:
     meta.helm.sh/release-name: {{ .Release.Name }}-backend-deployment
     meta.helm.sh/release-namespace: {{ .Values.namespace }}
 spec:
-  storageClassName: manual
+  volumeName: {{ .Release.Name }}-postgres-pv-v2
+  storageClassName: {{ .Values.storage.storageClass }}
   accessModes:
     - ReadWriteOnce
   resources:
@@ -20,21 +21,21 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: {{ .Release.Name }}-postgres-pv
+  name: {{ .Release.Name }}-postgres-pv-v2
   labels:
     app.kubernetes.io/managed-by: Helm
   annotations:
     meta.helm.sh/release-name: {{ .Release.Name }}-backend-deployment
     meta.helm.sh/release-namespace: {{ .Values.namespace }}
 spec:
-  storageClassName: manual
+  storageClassName: {{ .Values.storage.storageClass }}
   capacity:
     storage: 1Gi  
   accessModes:
     - ReadWriteOnce  
   persistentVolumeReclaimPolicy: Retain
   hostPath:
-    path: "/mnt/data" 
+    path: "/data/postgres"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -87,7 +88,6 @@ spec:
         volumeMounts:
           - mountPath: /var/lib/postgresql/data
             name: postgres-storage
-            subPath: postgres
         livenessProbe:
           exec:
             command:
@@ -110,7 +110,7 @@ spec:
       volumes:
         - name: postgres-storage
           persistentVolumeClaim:
-            claimName: {{ .Release.Name }}-postgres-pvc
+            claimName: {{ .Release.Name }}-postgres-pvc-v2
 ---
 apiVersion: v1
 kind: Service
