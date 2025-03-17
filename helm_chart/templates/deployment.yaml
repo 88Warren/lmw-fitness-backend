@@ -85,14 +85,15 @@ spec:
           httpGet:
             path: {{ .Values.api.path }}
             port: {{ .Values.api.port }}
-          initialDelaySeconds: 5
-          timeoutSeconds: 10
-          periodSeconds: 120
+          initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+          timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+          periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
         livenessProbe:
           httpGet:
             path: {{ .Values.api.path }}
             port: {{ .Values.api.port }}
-          initialDelaySeconds: 5
-          timeoutSeconds: 10
-          periodSeconds: 120
-          failureThreshold: 3
+          initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+          timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+          periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+          failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
