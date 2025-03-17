@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Release.Name }}-backend-service
+  name: {{ .Values.namespace }}-backend-service
   namespace: {{ .Values.namespace }}
   labels:
     app.kubernetes.io/managed-by: Helm
