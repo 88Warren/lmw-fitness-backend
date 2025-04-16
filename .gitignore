@@ -1,8 +1,10 @@
-.env
-/uploads
+/tmp/*
 dist
 dist-ssr
 *.local
 
 # Editor directories and files
 .vscode/*
+
+helm_chart/templates/secrets.yaml
+.env.*

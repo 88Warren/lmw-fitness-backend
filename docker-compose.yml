@@ -1,0 +1,61 @@
+services:
+  db:
+    image: postgres:latest
+    container_name: lmw_fitness_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_NAME: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - lmw-fitness-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PLATFORM: ${PLATFORM}
+    image: lmwcode/lmw_fitness_api:v9.0.0
+    container_name: lmw_fitness_api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_PORT: ${DB_PORT}
+      DB_SSLMODE: ${DB_SSLMODE}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_FROM: ${SMTP_FROM}
+      SMTP_TO: ${SMTP_TO}
+    ports:
+      - "8082:8082"
+    networks:
+      - lmw-fitness-network
+    env_file:
+      - .env.production
+    volumes:
+    - .env:/app/.env
+    restart: unless-stopped
+
+
+networks:
+  lmw-fitness-network:
+    driver: bridge
+
+volumes:
+  db-data:

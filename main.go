@@ -17,16 +17,15 @@ func main() {
 	database.ConnectToDB()
 	db := database.GetDB()
 
-	if err := database.SetupAdminUser(db); err != nil {
-		log.Printf("Error setting up admin user: %v", err)
-	}
-
 	router := config.SetupServer()
 
 	config.SetupHandlers(router, db)
 
-	fmt.Printf("Starting the server on port %s\n", config.GetEnv("PORT", "8080"))
-	if err := router.Run(":" + config.GetEnv("PORT", "8082")); err != nil {
+	port := config.GetEnv("PORT", "8080")
+	fmt.Printf("Starting the server on port %s\n", port)
+
+	// Start the server on the specified port
+	if err := router.Run(":" + port); err != nil {
 		log.Fatal("Failed to start the server:", err)
 	}
 }

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"log"
@@ -12,6 +13,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"gopkg.in/gomail.v2"
 	"gorm.io/gorm"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 type HomeController struct {
@@ -45,6 +49,8 @@ func (hc *HomeController) HandleContactForm(ctx *gin.Context) {
 		return
 	}
 
+	_, smtpPassword := getK8sSecrets()
+
 	// log.Printf("Form data received: %+v", form)
 	// log.Printf("reCAPTCHA token received: %s", form.Token)
 
@@ -54,7 +60,7 @@ func (hc *HomeController) HandleContactForm(ctx *gin.Context) {
 		return
 	}
 
-	err := sendEmail(form.Name, form.Email, form.Message)
+	err := sendEmail(form.Name, form.Email, form.Message, smtpPassword)
 	if err != nil {
 		log.Printf("Email sending failed: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send email"})
@@ -65,8 +71,30 @@ func (hc *HomeController) HandleContactForm(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{"status": "success", "message": "Message received!"})
 }
+func getK8sSecrets() (string, string) {
+	config, err := rest.InClusterConfig()
+	if err != nil {
+		log.Fatalf("Failed to load cluster config: %v", err)
+	}
 
-func sendEmail(name, email, message string) error {
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		log.Fatalf("Failed to create Kubernetes client: %v", err)
+	}
+
+	ctx := context.TODO()
+	secret, err := clientset.CoreV1().Secrets("lmw-fitness").Get(ctx, "lmw-fitness-secrets", metav1.GetOptions{})
+	if err != nil {
+		log.Fatalf("Failed to get secret: %v", err)
+	}
+
+	recaptchaSecret := string(secret.Data["RECAPTCHA_SECRET"])
+	smtpPassword := string(secret.Data["SMTP_PASSWORD"])
+
+	return recaptchaSecret, smtpPassword
+}
+
+func sendEmail(name, email, message, smtpPassword string) error {
 
 	// log.Printf("SMTP Config - Host: %s, Port: %s, From: %s, To: %s",
 	// 	os.Getenv("SMTP_HOST"),
@@ -88,7 +116,7 @@ func sendEmail(name, email, message string) error {
 		os.Getenv("SMTP_HOST"),
 		port,
 		os.Getenv("SMTP_USERNAME"),
-		os.Getenv("SMTP_PASSWORD"),
+		smtpPassword,
 	)
 	d.TLSConfig = &tls.Config{
 		ServerName: os.Getenv("SMTP_HOST"),

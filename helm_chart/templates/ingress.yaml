@@ -1,0 +1,36 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-backend-ingress
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    meta.helm.sh/release-name: {{ .Release.Name }}-backend-ingress
+    meta.helm.sh/release-namespace: {{ .Values.namespace }}
+spec:
+  rules:
+  - host: {{ .Values.api.host | quote }}
+    http:
+      paths:
+      - path: {{ .Values.api.path }}
+        pathType: {{ .Values.api.pathType }}
+        backend:
+          service:
+            name: {{ .Values.namespace }}-backend-service
+            port:
+              number: {{ .Values.api.port }}
+      - path: /debug/images
+        pathType: {{ .Values.api.pathType }}
+        backend:
+          service:
+            name: {{ .Values.namespace }}-backend-service
+            port:
+              number: {{ .Values.api.port }}
+      - path: /images
+        pathType: {{ .Values.api.pathType }}
+        backend:
+          service:
+            name: {{ .Values.namespace }}-backend-service
+            port:
+              number: {{ .Values.api.port }}

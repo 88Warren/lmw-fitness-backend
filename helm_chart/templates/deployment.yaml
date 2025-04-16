@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-backend-deployment
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: backend
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/name: backend
+  annotations:
+    meta.helm.sh/release-name: {{ .Release.Name }}-backend-deployment
+    meta.helm.sh/release-namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: backend
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: backend
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox
+        command: 
+        - "sh"
+        - "-c"
+        - "until nc -z {{ .Release.Name }}-postgres-service {{ .Values.database.port }}; do echo waiting for postgres; sleep 2; done;"
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "50m"
+          limits:
+            memory: "32Mi"
+            cpu: "100m"
+      containers:
+      - name: backend
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.api.port }}
+          name: http
+          protocol: TCP
+        resources:
+          requests:
+            memory: "48Mi"
+            cpu: "150m"
+          limits:
+            memory: "64Mi"
+            cpu: "250m"
+        envFrom:
+        - configMapRef:
+            name: {{ .Release.Name }}-backend-configmap
+        env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-backend-secrets
+              key: DB_PASSWORD
+        - name: SMTP_PASSWORD 
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-backend-secrets
+              key: SMTP_PASSWORD
+        - name: RECAPTCHA_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-backend-secrets
+              key: RECAPTCHA_SECRET
+        - name: ACCESS_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-backend-secrets
+              key: ACCESS_SECRET_KEY
+        - name: REFRESH_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-backend-secrets
+              key: REFRESH_SECRET_KEY
+        readinessProbe:
+          httpGet:
+            path: {{ .Values.api.path }}
+            port: {{ .Values.api.port }}
+          initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+          timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+          periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+        livenessProbe:
+          httpGet:
+            path: {{ .Values.api.path }}
+            port: {{ .Values.api.port }}
+          initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+          timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+          periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+          failureThreshold: {{ .Values.livenessProbe.failureThreshold }}

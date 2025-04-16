@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-backend-configmap
+  namespace: {{ .Values.namespace }}
+data:
+  GO_ENV: "{{ .Values.env }}"
+  PORT: "{{ .Values.api.port }}"
+  DB_HOST: "{{ .Release.Name }}-postgres-service"
+  DB_USER: "{{ .Values.database.user }}"
+  DB_NAME: "{{ .Values.database.name }}"
+  DB_PORT: "{{ .Values.database.port }}"
+  DB_SSLMODE: "{{ .Values.database.sslMode }}"
+  STORAGE_CLASS: "{{ .Values.storage.storageClass }}"
+  SMTP_HOST: "{{ .Values.smtp.host }}"
+  SMTP_PORT: "{{ .Values.smtp.port }}"
+  SMTP_USERNAME: "{{ .Values.smtp.username }}"
+  SMTP_FROM: "{{ .Values.smtp.from }}"
+  SMTP_TO: "{{ .Values.smtp.to }}"
