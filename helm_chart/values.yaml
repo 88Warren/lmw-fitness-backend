@@ -2,15 +2,16 @@ namespace: lmw-fitness
 GO_ENV: production
 
 api:
+  host: api.lmwfitness.co.uk
   port: 8082
   type: NodePort  
   nodePort: 30260
   path: /api/
-  pathType: ImplementationSpecific
+  pathType: Prefix
 
 image:
   repository: lmwcode/lmw_fitness_api
-  tag: v4.0.0
+  tag: v9.0.0
   pullPolicy: Always
 
 replicaCount: 1
@@ -35,10 +36,10 @@ smtp:
 livenessProbe:
   initialDelaySeconds: 30
   timeoutSeconds: 5
-  periodSeconds: 10
+  periodSeconds: 120
   failureThreshold: 3
 readinessProbe:
   initialDelaySeconds: 15
   timeoutSeconds: 5
-  periodSeconds: 10
+  periodSeconds: 120
   failureThreshold: 3

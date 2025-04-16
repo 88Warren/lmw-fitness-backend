@@ -23,7 +23,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: lmwcode/lmw_fitness_api:v4.0.0
+      args:
+        PLATFORM: ${PLATFORM}
+    image: lmwcode/lmw_fitness_api:v9.0.0
     container_name: lmw_fitness_api
     depends_on:
       db:

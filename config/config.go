@@ -2,6 +2,7 @@ package config
 
 import (
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -45,6 +46,25 @@ func GetEnv(key string, fallback string) string {
 func SetupServer() *gin.Engine {
 	router := gin.Default()
 	router.Static("/images", "./images")
+	router.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Next()
+	})
+	router.GET("/debug/images", func(c *gin.Context) {
+		log.Println("Hit /debug/images route")
+		files, err := os.ReadDir("./images")
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		var filenames []string
+		for _, file := range files {
+			filenames = append(filenames, file.Name())
+		}
+
+		c.JSON(http.StatusOK, gin.H{"files": filenames})
+	})
 	router.Use(middleware.DBMiddleware())
 	return router
 }

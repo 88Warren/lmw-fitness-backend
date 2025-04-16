@@ -64,11 +64,11 @@ spec:
         - containerPort: {{ .Values.database.port }}
         resources:
           requests:
+            memory: "192Mi"
+            cpu: "200m"
+          limits:
             memory: "256Mi"
             cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
         env:
         - name: POSTGRES_USER
           valueFrom:
@@ -128,6 +128,6 @@ spec:
     app: {{ .Release.Name }}-postgres
   ports:
   - port: {{ .Values.database.port }}
-    targetPort: {{  .Values.database.port }}
+    targetPort: {{ .Values.database.port }}
     protocol: TCP
   type: {{ .Values.database.type }}
