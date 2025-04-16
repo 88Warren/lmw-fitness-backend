@@ -11,7 +11,7 @@ api:
 
 image:
   repository: lmwcode/lmw_fitness_api
-  tag: v9.0.0
+  tag: v1.1.0
   pullPolicy: Always
 
 replicaCount: 1
@@ -34,11 +34,13 @@ smtp:
   to: info@lmwfitness.co.uk
 
 livenessProbe:
+  endpoint: /api/health/live
   initialDelaySeconds: 30
   timeoutSeconds: 5
   periodSeconds: 120
   failureThreshold: 3
 readinessProbe:
+  endpoint: /api/health/ready
   initialDelaySeconds: 15
   timeoutSeconds: 5
   periodSeconds: 120

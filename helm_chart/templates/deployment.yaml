@@ -83,7 +83,7 @@ spec:
               key: REFRESH_SECRET_KEY
         readinessProbe:
           httpGet:
-            path: {{ .Values.api.path }}
+            path: {{ .Values.readinessProbe.endpoint }}
             port: {{ .Values.api.port }}
           initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
           timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
@@ -91,7 +91,7 @@ spec:
           failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
         livenessProbe:
           httpGet:
-            path: {{ .Values.api.path }}
+            path: {{ .Values.livenessProbe.endpoint }}
             port: {{ .Values.api.port }}
           initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
           timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
