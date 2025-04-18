@@ -5,12 +5,9 @@ import (
 	"github.com/laurawarren88/LMW_Fitness/controllers"
 )
 
-func RegisterHomeRoutes(router *gin.Engine, hc *controllers.HomeController) {
+func RegisterHomeRoutes(router *gin.Engine, hc *controllers.HomeController, healthController *controllers.HealthController) {
 	router.GET("/api/", hc.GetHome)
 	router.POST("/api/contact", hc.HandleContactForm)
-}
-
-func HealthCheckRoutes(router *gin.Engine, hc *controllers.HealthController) {
-	router.GET("/api//health/live", hc.LivenessCheck)
-	router.GET("/api/health/ready", hc.ReadinessCheck)
+	router.GET("/api/health/live", healthController.LivenessCheck)
+	router.GET("/api/health/ready", healthController.ReadinessCheck)
 }

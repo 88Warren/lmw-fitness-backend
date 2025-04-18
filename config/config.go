@@ -46,10 +46,7 @@ func GetEnv(key string, fallback string) string {
 func SetupServer() *gin.Engine {
 	router := gin.Default()
 	router.Static("/images", "./images")
-	router.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Next()
-	})
+	router.Use(middleware.CORSMiddleware())
 	router.GET("/debug/images", func(c *gin.Context) {
 		log.Println("Hit /debug/images route")
 		files, err := os.ReadDir("./images")
@@ -71,6 +68,6 @@ func SetupServer() *gin.Engine {
 
 func SetupHandlers(router *gin.Engine, db *gorm.DB) {
 	homeController := controllers.NewHomeController(db)
-
-	routes.RegisterHomeRoutes(router, homeController)
+	healthController := controllers.NewHealthController(db)
+	routes.RegisterHomeRoutes(router, homeController, healthController)
 }

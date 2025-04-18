@@ -15,21 +15,21 @@ func NewHealthController(db *gorm.DB) *HealthController {
 	return &HealthController{DB: db}
 }
 
-func (hc *HealthController) LivenessCheck(ctx *gin.Context) {
-	ctx.JSON(http.StatusOK, gin.H{"message": "Liveness check passed"})
+func (healthController *HealthController) LivenessCheck(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, gin.H{"status": "Live"})
 }
 
-func (hc *HealthController) ReadinessCheck(ctx *gin.Context) {
-	err := hc.checkDatabaseConnection()
+func (healthController *HealthController) ReadinessCheck(ctx *gin.Context) {
+	err := healthController.checkDatabaseConnection()
 	if err != nil {
 		ctx.JSON(http.StatusServiceUnavailable, gin.H{"error": "Database connection failed"})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "Readiness check passed"})
+	ctx.JSON(http.StatusOK, gin.H{"status": "Ready"})
 }
 
-func (hc *HealthController) checkDatabaseConnection() error {
-	sqlDB, err := hc.DB.DB()
+func (healthController *HealthController) checkDatabaseConnection() error {
+	sqlDB, err := healthController.DB.DB()
 	if err != nil {
 		return err
 	}

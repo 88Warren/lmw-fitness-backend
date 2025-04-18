@@ -55,7 +55,7 @@ func (hc *HomeController) HandleContactForm(ctx *gin.Context) {
 	// log.Printf("reCAPTCHA token received: %s", form.Token)
 
 	if !verifyRecaptcha(form.Token) {
-		// log.Printf("reCAPTCHA verification failed for token: %s", form.Token)
+		log.Printf("reCAPTCHA verification failed for token: %s", form.Token)
 		ctx.JSON(http.StatusForbidden, gin.H{"error": "reCAPTCHA verification failed"})
 		return
 	}
@@ -71,7 +71,12 @@ func (hc *HomeController) HandleContactForm(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{"status": "success", "message": "Message received!"})
 }
+
 func getK8sSecrets() (string, string) {
+	if os.Getenv("KUBERNETES_SERVICE_HOST") == "" {
+		return os.Getenv("RECAPTCHA_SECRET"), os.Getenv("SMTP_PASSWORD")
+	}
+
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		log.Fatalf("Failed to load cluster config: %v", err)
@@ -83,7 +88,7 @@ func getK8sSecrets() (string, string) {
 	}
 
 	ctx := context.TODO()
-	secret, err := clientset.CoreV1().Secrets("lmw-fitness").Get(ctx, "lmw-fitness-secrets", metav1.GetOptions{})
+	secret, err := clientset.CoreV1().Secrets("lmw-fitness").Get(ctx, os.Getenv("SECRET_NAME"), metav1.GetOptions{})
 	if err != nil {
 		log.Fatalf("Failed to get secret: %v", err)
 	}
@@ -101,6 +106,8 @@ func sendEmail(name, email, message, smtpPassword string) error {
 	// 	os.Getenv("SMTP_PORT"),
 	// 	os.Getenv("SMTP_FROM"),
 	// 	os.Getenv("SMTP_TO"))
+
+	// log.Printf("SMTP_PASSWORD length: %d", len(smtpPassword))
 
 	m := gomail.NewMessage()
 	m.SetHeader("From", os.Getenv("SMTP_FROM"))
@@ -122,7 +129,14 @@ func sendEmail(name, email, message, smtpPassword string) error {
 		ServerName: os.Getenv("SMTP_HOST"),
 	}
 
-	return d.DialAndSend(m)
+	// log.Printf("Using SMTP credentials: %s / %s", os.Getenv("SMTP_USERNAME"), smtpPassword)
+
+	log.Println("Sending...")
+	if err := d.DialAndSend(m); err != nil {
+		log.Fatalf("Send failed: %v", err)
+	}
+	log.Println("Sent.")
+	return nil
 }
 
 func verifyRecaptcha(token string) bool {
