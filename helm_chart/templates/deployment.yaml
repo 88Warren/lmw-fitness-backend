@@ -89,6 +89,7 @@ spec:
           timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
           periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
           failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+          successThreshold: {{ .Values.readinessProbe.successThreshold }}
         livenessProbe:
           httpGet:
             path: {{ .Values.livenessProbe.endpoint }}
@@ -97,3 +98,4 @@ spec:
           timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
           periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
           failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+          successThreshold: {{ .Values.livenessProbe.successThreshold }}

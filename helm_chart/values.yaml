@@ -1,5 +1,6 @@
 namespace: lmw-fitness
-GO_ENV: production
+env: production
+allowedOrigin: https://www.lmwfitness.co.uk
 
 api:
   host: api.lmwfitness.co.uk
@@ -11,7 +12,7 @@ api:
 
 image:
   repository: lmwcode/lmw_fitness_api
-  tag: v1.1.0
+  tag: v1.9.0
   pullPolicy: Always
 
 replicaCount: 1
@@ -39,9 +40,11 @@ livenessProbe:
   timeoutSeconds: 5
   periodSeconds: 120
   failureThreshold: 3
+  successThreshold: 1
 readinessProbe:
   endpoint: /api/health/ready
   initialDelaySeconds: 15
   timeoutSeconds: 5
   periodSeconds: 120
   failureThreshold: 3
+  successThreshold: 1

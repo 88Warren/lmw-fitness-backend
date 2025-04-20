@@ -10,4 +10,5 @@ func RegisterHomeRoutes(router *gin.Engine, hc *controllers.HomeController, heal
 	router.POST("/api/contact", hc.HandleContactForm)
 	router.GET("/api/health/live", healthController.LivenessCheck)
 	router.GET("/api/health/ready", healthController.ReadinessCheck)
+	router.POST("/contact", hc.HandleContactForm)
 }

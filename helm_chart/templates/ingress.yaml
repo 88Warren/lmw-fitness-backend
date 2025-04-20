@@ -6,11 +6,17 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: Helm
   annotations:
-    meta.helm.sh/release-name: {{ .Release.Name }}-backend-ingress
+    meta.helm.sh/release-name: {{ .Release.Name }}
     meta.helm.sh/release-namespace: {{ .Values.namespace }}
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
+  ingressClassName: nginx
+  tls: 
+    - hosts:
+      - {{ .Values.api.host }}
+      secretName: lmwfitness-ssl
   rules:
-  - host: {{ .Values.api.host | quote }}
+  - host: {{ .Values.api.host }}
     http:
       paths:
       - path: {{ .Values.api.path }}

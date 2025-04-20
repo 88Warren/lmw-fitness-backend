@@ -5,6 +5,7 @@ metadata:
   namespace: {{ .Values.namespace }}
 data:
   GO_ENV: "{{ .Values.env }}"
+  ALLOWED_ORIGIN: "{{ .Values.allowedOrigin }}"
   PORT: "{{ .Values.api.port }}"
   DB_HOST: "{{ .Release.Name }}-postgres-service"
   DB_USER: "{{ .Values.database.user }}"

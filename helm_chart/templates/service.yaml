@@ -6,11 +6,12 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: Helm
   annotations:
-    meta.helm.sh/release-name: {{ .Release.Name }}-backend-service
+    meta.helm.sh/release-name: {{ .Values.namespace }}-backend-service
     meta.helm.sh/release-namespace: {{ .Values.namespace }}
 spec:
   selector:
     app: backend
+    app.kubernetes.io/instance: {{ .Values.namespace }}
   ports:
   - port: {{ .Values.api.port }}
     targetPort: {{  .Values.api.port }}
