@@ -11,7 +11,7 @@ metadata:
 spec:
   selector:
     app: backend
-    app.kubernetes.io/instance: {{ .Values.namespace }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
   ports:
   - port: {{ .Values.api.port }}
     targetPort: {{  .Values.api.port }}

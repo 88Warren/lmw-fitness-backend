@@ -12,7 +12,7 @@ api:
 
 image:
   repository: lmwcode/lmw_fitness_api
-  tag: v1.1.2
+  tag: v1.1.4
   pullPolicy: Always
 
 replicaCount: 1
