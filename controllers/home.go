@@ -42,11 +42,14 @@ func (hc *HomeController) GetHome(ctx *gin.Context) {
 func (hc *HomeController) HandleContactForm(ctx *gin.Context) {
 	log.Println("Received contact form request")
 	log.Printf("Contact form endpoint hit with path: %s", ctx.Request.URL.Path)
-
+	log.Printf("Request headers: %v", ctx.Request.Header)
 	var form ContactForm
 	if err := ctx.ShouldBindJSON(&form); err != nil {
 		log.Printf("Form binding error: %v", err)
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   err.Error(),
+			"stattus": "error",
+		})
 		return
 	}
 
@@ -89,7 +92,7 @@ func getK8sSecrets() (string, string) {
 	}
 
 	ctx := context.TODO()
-	secret, err := clientset.CoreV1().Secrets("lmw-fitness").Get(ctx, "lmw-fitness-backend-backend-secret", metav1.GetOptions{})
+	secret, err := clientset.CoreV1().Secrets("lmw-fitness").Get(ctx, "lmw-fitness-backend-backend-secrets", metav1.GetOptions{})
 	if err != nil {
 		log.Fatalf("Failed to get secret: %v", err)
 	}
@@ -145,6 +148,7 @@ func verifyRecaptcha(token string) bool {
 	verifyURL := "https://www.google.com/recaptcha/api/siteverify"
 
 	log.Printf("Verifying reCAPTCHA with secret: %s, token: %s", secret, token)
+	log.Printf("Using RECAPTCHA_SECRET: %s", secret)
 
 	resp, err := http.PostForm(verifyURL, url.Values{
 		"secret":   {secret},
