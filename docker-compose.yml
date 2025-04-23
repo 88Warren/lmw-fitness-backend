@@ -25,7 +25,7 @@ services:
       dockerfile: Dockerfile
       args:
         PLATFORM: ${PLATFORM}
-    image: lmwcode/lmw_fitness_api:v1.1.7
+    image: lmwcode/lmw_fitness_api:v1.1.9
     container_name: lmw_fitness_api
     depends_on:
       db:

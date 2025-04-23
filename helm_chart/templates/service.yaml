@@ -11,10 +11,10 @@ metadata:
 spec:
   selector:
     app: backend
-    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/instance: lmw-fitness-backend
   ports:
-  - port: {{ .Values.api.port }}
-    targetPort: {{  .Values.api.port }}
+  - port: 8082
+    targetPort: 8082
     protocol: TCP
     nodePort: {{ .Values.api.nodePort }}
   type: {{ .Values.api.type }}
