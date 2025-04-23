@@ -38,6 +38,11 @@ spec:
             memory: "32Mi"
             cpu: "100m"
       containers:
+      - name: debug-shell
+        image: nicolaka/netshoot
+        command: [ "sleep", "3600" ]
+        stdin: true
+        tty: true
       - name: backend
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
