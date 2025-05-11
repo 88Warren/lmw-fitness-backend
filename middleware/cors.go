@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"log"
 	"os"
 	"time"
 
@@ -11,7 +10,7 @@ import (
 
 func CORSMiddleware() gin.HandlerFunc {
 	allowedOrigin := os.Getenv("ALLOWED_ORIGIN")
-	log.Println("allowedOrigin: ", allowedOrigin)
+	// log.Println("allowedOrigin: ", allowedOrigin)
 
 	return cors.New(cors.Config{
 		AllowOrigins: []string{allowedOrigin},

@@ -40,20 +40,25 @@ func (hc *HomeController) GetHome(ctx *gin.Context) {
 }
 
 func (hc *HomeController) HandleContactForm(ctx *gin.Context) {
-	log.Println("Received contact form request")
-	log.Printf("Contact form endpoint hit with path: %s", ctx.Request.URL.Path)
-
+	ctx.Header("Access-Control-Allow-Origin", "https://www.lmwfitness.co.uk")
+	ctx.Header("Access-Control-Allow-Credentials", "true")
+	// log.Println("Received contact form request")
+	// log.Printf("Contact form endpoint hit with path: %s", ctx.Request.URL.Path)
+	// log.Printf("Request headers: %v", ctx.Request.Header)
 	var form ContactForm
 	if err := ctx.ShouldBindJSON(&form); err != nil {
 		log.Printf("Form binding error: %v", err)
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error":   err.Error(),
+			"stattus": "error",
+		})
 		return
 	}
 
 	_, smtpPassword := getK8sSecrets()
 
-	log.Printf("Form data received: %+v", form)
-	log.Printf("reCAPTCHA token received: %s", form.Token)
+	// log.Printf("Form data received: %+v", form)
+	// log.Printf("reCAPTCHA token received: %s", form.Token)
 
 	if !verifyRecaptcha(form.Token) {
 		log.Printf("reCAPTCHA verification failed for token: %s", form.Token)
@@ -68,7 +73,7 @@ func (hc *HomeController) HandleContactForm(ctx *gin.Context) {
 		return
 	}
 
-	log.Printf("Contact form submitted: %+v\n", form)
+	// log.Printf("Contact form submitted: %+v\n", form)
 
 	ctx.JSON(http.StatusOK, gin.H{"status": "success", "message": "Message received!"})
 }
@@ -89,7 +94,7 @@ func getK8sSecrets() (string, string) {
 	}
 
 	ctx := context.TODO()
-	secret, err := clientset.CoreV1().Secrets("lmw-fitness").Get(ctx, "lmw-fitness-backend-backend-secret", metav1.GetOptions{})
+	secret, err := clientset.CoreV1().Secrets("lmw-fitness").Get(ctx, "lmw-fitness-backend-backend-secrets", metav1.GetOptions{})
 	if err != nil {
 		log.Fatalf("Failed to get secret: %v", err)
 	}
@@ -102,13 +107,13 @@ func getK8sSecrets() (string, string) {
 
 func sendEmail(name, email, message, smtpPassword string) error {
 
-	log.Printf("SMTP Config - Host: %s, Port: %s, From: %s, To: %s",
-		os.Getenv("SMTP_HOST"),
-		os.Getenv("SMTP_PORT"),
-		os.Getenv("SMTP_FROM"),
-		os.Getenv("SMTP_TO"))
+	// log.Printf("SMTP Config - Host: %s, Port: %s, From: %s, To: %s",
+	// 	os.Getenv("SMTP_HOST"),
+	// 	os.Getenv("SMTP_PORT"),
+	// 	os.Getenv("SMTP_FROM"),
+	// 	os.Getenv("SMTP_TO"))
 
-	log.Printf("SMTP_PASSWORD length: %d", len(smtpPassword))
+	// log.Printf("SMTP_PASSWORD length: %d", len(smtpPassword))
 
 	m := gomail.NewMessage()
 	m.SetHeader("From", os.Getenv("SMTP_FROM"))
@@ -130,13 +135,13 @@ func sendEmail(name, email, message, smtpPassword string) error {
 		ServerName: os.Getenv("SMTP_HOST"),
 	}
 
-	log.Printf("Using SMTP credentials: %s / %s", os.Getenv("SMTP_USERNAME"), smtpPassword)
+	// log.Printf("Using SMTP credentials: %s / %s", os.Getenv("SMTP_USERNAME"), smtpPassword)
 
-	log.Println("Sending...")
+	// log.Println("Sending...")
 	if err := d.DialAndSend(m); err != nil {
 		log.Fatalf("Send failed: %v", err)
 	}
-	log.Println("Sent.")
+	// log.Println("Sent.")
 	return nil
 }
 
@@ -144,7 +149,8 @@ func verifyRecaptcha(token string) bool {
 	secret := os.Getenv("RECAPTCHA_SECRET")
 	verifyURL := "https://www.google.com/recaptcha/api/siteverify"
 
-	log.Printf("Verifying reCAPTCHA with secret: %s, token: %s", secret, token)
+	// log.Printf("Verifying reCAPTCHA with secret: %s, token: %s", secret, token)
+	// log.Printf("Using RECAPTCHA_SECRET: %s", secret)
 
 	resp, err := http.PostForm(verifyURL, url.Values{
 		"secret":   {secret},
@@ -169,7 +175,13 @@ func verifyRecaptcha(token string) bool {
 	}
 
 	// Add debug logging
-	log.Printf("reCAPTCHA verification result: %+v", result)
-	log.Printf("Using RECAPTCHA_SECRET: %s", secret)
+	// log.Printf("reCAPTCHA verification result: %+v", result)
+	// log.Printf("Using RECAPTCHA_SECRET: %s", secret)
 	return result.Success
+}
+
+func (hc *HomeController) TestEndpoint(ctx *gin.Context) {
+	ctx.Header("Access-Control-Allow-Origin", "https://www.lmwfitness.co.uk")
+	ctx.Header("Access-Control-Allow-Credentials", "true")
+	ctx.JSON(http.StatusOK, gin.H{"status": "test successful"})
 }
