@@ -36,7 +36,7 @@ func CORSMiddleware() gin.HandlerFunc {
 			"Content-Type",
 			"Content-Disposition",
 		},
-		AllowCredentials: true,
+		AllowCredentials: false,
 		MaxAge:           12 * time.Hour,
 	})
 }

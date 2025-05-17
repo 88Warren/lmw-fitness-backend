@@ -45,8 +45,8 @@ func GetEnv(key string, fallback string) string {
 
 func SetupServer() *gin.Engine {
 	router := gin.Default()
-	router.Static("/images", "./images")
 	router.Use(middleware.CORSMiddleware())
+	router.Static("/images", "./images")
 	router.GET("/debug/images", func(c *gin.Context) {
 		log.Println("Hit /debug/images route")
 		files, err := os.ReadDir("./images")
