@@ -6,10 +6,17 @@ import (
 )
 
 func RegisterHomeRoutes(router *gin.Engine, hc *controllers.HomeController, healthController *controllers.HealthController) {
-	router.GET("/api/", hc.GetHome)
-	router.POST("/api/contact", hc.HandleContactForm)
-	router.GET("/api/health/live", healthController.LivenessCheck)
-	router.GET("/api/health/ready", healthController.ReadinessCheck)
-	router.POST("/contact", hc.HandleContactForm)
-	router.POST("/api/test", hc.TestEndpoint)
+	// API routes
+	api := router.Group("/api")
+	{
+		api.GET("/", hc.GetHome)
+		api.POST("/contact", hc.HandleContactForm)
+		api.GET("/health/live", healthController.LivenessCheck)
+		api.GET("/health/ready", healthController.ReadinessCheck)
+		api.POST("/test", hc.TestEndpoint)
+	}
+
+	// Images route
+	imagesController := controllers.NewImagesController()
+	router.GET("/images/:filename", imagesController.GetImage)
 }

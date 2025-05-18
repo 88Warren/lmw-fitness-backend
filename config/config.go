@@ -26,6 +26,10 @@ func LoadEnv() {
 	err := godotenv.Load(envFile)
 	if err != nil {
 		log.Printf("Warning: No %s file found, relying on system environment variables", envFile)
+		// In Kubernetes, we rely on environment variables from ConfigMap and Secrets
+		if os.Getenv("KUBERNETES_SERVICE_HOST") != "" {
+			log.Printf("Running in Kubernetes, using environment variables from ConfigMap and Secrets")
+		}
 	} else {
 		log.Printf("Loaded environment variables from %s", envFile)
 	}
