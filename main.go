@@ -21,7 +21,8 @@ func main() {
 
 	config.SetupHandlers(router, db)
 
-	port := config.GetEnv("PORT", "8080")
+	// Use the port from values.yaml
+	port := "8082"
 	fmt.Printf("Starting the server on port %s\n", port)
 
 	// Start the server on the specified port
