@@ -50,8 +50,9 @@ func GetEnv(key string, fallback string) string {
 func SetupServer() *gin.Engine {
 	router := gin.Default()
 	router.Use(middleware.CORSMiddleware())
-	// Use a different path for static files to avoid conflicts
+	// Serve static files from the backend directory
 	router.Static("/static", "./images")
+	router.Static("/images", "./images")
 	router.GET("/debug/images", func(c *gin.Context) {
 		log.Println("Hit /debug/images route")
 		files, err := os.ReadDir("./images")
