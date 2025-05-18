@@ -20,6 +20,6 @@ func RegisterHomeRoutes(router *gin.Engine, hc *controllers.HomeController, heal
 	images := router.Group("/images")
 	imagesController := controllers.NewImagesController()
 	{
-		images.GET("/:filename", imagesController.GetImage)
+		images.GET("/file/:filename", imagesController.GetImage)
 	}
 }
