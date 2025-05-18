@@ -26,6 +26,10 @@ func LoadEnv() {
 	err := godotenv.Load(envFile)
 	if err != nil {
 		log.Printf("Warning: No %s file found, relying on system environment variables", envFile)
+		// In Kubernetes, we rely on environment variables from ConfigMap and Secrets
+		if os.Getenv("KUBERNETES_SERVICE_HOST") != "" {
+			log.Printf("Running in Kubernetes, using environment variables from ConfigMap and Secrets")
+		}
 	} else {
 		log.Printf("Loaded environment variables from %s", envFile)
 	}
@@ -45,8 +49,8 @@ func GetEnv(key string, fallback string) string {
 
 func SetupServer() *gin.Engine {
 	router := gin.Default()
-	router.Static("/images", "./images")
 	router.Use(middleware.CORSMiddleware())
+	router.Static("/images", "./images")
 	router.GET("/debug/images", func(c *gin.Context) {
 		log.Println("Hit /debug/images route")
 		files, err := os.ReadDir("./images")
