@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,6 +21,15 @@ func (ic *ImagesController) GetImage(c *gin.Context) {
 		return
 	}
 
-	// Serve the file from the images directory
-	c.FileFromFS("./images/"+filename, http.Dir("."))
+	// Ensure we only serve files from the images directory
+	filepath := "./images/" + filename
+	
+	// Check if file exists
+	if _, err := os.Stat(filepath); os.IsNotExist(err) {
+		c.Status(http.StatusNotFound)
+		return
+	}
+
+	// Serve the file
+	c.File(filepath)
 }

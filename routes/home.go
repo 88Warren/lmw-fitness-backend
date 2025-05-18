@@ -16,7 +16,10 @@ func RegisterHomeRoutes(router *gin.Engine, hc *controllers.HomeController, heal
 		api.POST("/test", hc.TestEndpoint)
 	}
 
-	// Images route
+	// Images group
+	images := router.Group("/images")
 	imagesController := controllers.NewImagesController()
-	router.GET("/images/:filename", imagesController.GetImage)
+	{
+		images.GET("/:filename", imagesController.GetImage)
+	}
 }
