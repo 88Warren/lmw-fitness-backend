@@ -102,7 +102,7 @@ func getK8sSecrets() (string, string) {
 	}
 
 	ctx := context.TODO()
-	secret, err := clientset.CoreV1().Secrets("lmw-fitness").Get(ctx, "lmw-fitness-backend-backend-secrets", metav1.GetOptions{})
+	secret, err := clientset.CoreV1().Secrets("lmw-fitness").Get(ctx, "lmw-fitness-api-secrets", metav1.GetOptions{})
 	if err != nil {
 		log.Fatalf("Failed to get secret: %v", err)
 	}
