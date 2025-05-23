@@ -51,7 +51,7 @@ func SetupServer() *gin.Engine {
 	router := gin.Default()
 	router.Use(middleware.CORSMiddleware())
 	// Serve static files from the backend directory
-	router.Static("/static", "./images")
+	// router.Static("/static", "./images")
 	router.Static("/images", "./images") // Adjust if needed based on working directory
 	router.GET("/debug/images", func(c *gin.Context) {
 		log.Println("Hit /debug/images route")
