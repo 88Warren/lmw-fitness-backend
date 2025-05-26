@@ -11,5 +11,7 @@ func RegisterBlogRoutes(router *gin.Engine, bc *controllers.BlogController) {
 	{
 		api.GET("/blog", bc.GetBlog)
 		api.POST("/blog", bc.CreateBlog)
+		api.PUT("/blog/:id", bc.UpdateBlog)
+		api.DELETE("/blog/:id", bc.DeleteBlog)
 	}
 }
