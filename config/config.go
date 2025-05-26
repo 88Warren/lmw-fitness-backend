@@ -9,6 +9,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/laurawarren88/LMW_Fitness/controllers"
 	"github.com/laurawarren88/LMW_Fitness/middleware"
+	"github.com/laurawarren88/LMW_Fitness/models"
 	"github.com/laurawarren88/LMW_Fitness/routes"
 	"gorm.io/gorm"
 )
@@ -26,7 +27,6 @@ func LoadEnv() {
 	err := godotenv.Load(envFile)
 	if err != nil {
 		log.Printf("Warning: No %s file found, relying on system environment variables", envFile)
-		// In Kubernetes, we rely on environment variables from ConfigMap and Secrets
 		if os.Getenv("KUBERNETES_SERVICE_HOST") != "" {
 			log.Printf("Running in Kubernetes, using environment variables from ConfigMap and Secrets")
 		}
@@ -50,9 +50,7 @@ func GetEnv(key string, fallback string) string {
 func SetupServer() *gin.Engine {
 	router := gin.Default()
 	router.Use(middleware.CORSMiddleware())
-	// Serve static files from the backend directory
-	// router.Static("/static", "./images")
-	router.Static("/images", "./images") // Adjust if needed based on working directory
+	router.Static("/images", "./images")
 	router.GET("/debug/images", func(c *gin.Context) {
 		log.Println("Hit /debug/images route")
 		files, err := os.ReadDir("./images")
@@ -73,7 +71,15 @@ func SetupServer() *gin.Engine {
 }
 
 func SetupHandlers(router *gin.Engine, db *gorm.DB) {
+	err := db.AutoMigrate(&models.Blog{})
+	if err != nil {
+		log.Fatalf("Failed to auto migrate Blog model: %v", err)
+	}
+	log.Println("Blog model auto-migrated successfully.")
+
 	homeController := controllers.NewHomeController(db)
 	healthController := controllers.NewHealthController(db)
+	blogController := controllers.NewBlogController(db)
 	routes.RegisterHomeRoutes(router, homeController, healthController)
+	routes.RegisterBlogRoutes(router, blogController)
 }
