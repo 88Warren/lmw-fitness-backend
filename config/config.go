@@ -11,6 +11,7 @@ import (
 	"github.com/laurawarren88/LMW_Fitness/middleware"
 	"github.com/laurawarren88/LMW_Fitness/models"
 	"github.com/laurawarren88/LMW_Fitness/routes"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -70,16 +71,71 @@ func SetupServer() *gin.Engine {
 	return router
 }
 
-func SetupHandlers(router *gin.Engine, db *gorm.DB) {
-	err := db.AutoMigrate(&models.Blog{})
-	if err != nil {
-		log.Fatalf("Failed to auto migrate Blog model: %v", err)
+func SetupAdminUser(db *gorm.DB) error {
+	adminEmail := os.Getenv("ADMIN_EMAIL")
+	adminPassword := os.Getenv("ADMIN_PASSWORD")
+
+	if adminEmail == "" || adminPassword == "" {
+		log.Println("ADMIN_EMAIL or ADMIN_PASSWORD environment variables not set. Skipping admin user setup.")
+		return nil // Not an error, just skipping setup
 	}
-	log.Println("Blog model auto-migrated successfully.")
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("Failed to hash admin password: %v", err)
+		return err
+	}
+
+	adminUser := models.User{
+		Email:        adminEmail,
+		PasswordHash: string(hashedPassword),
+		Role:         "admin", // Set role to admin
+	}
+
+	var existingUser models.User
+	result := db.Where("email = ?", adminUser.Email).First(&existingUser)
+
+	if result.Error == gorm.ErrRecordNotFound {
+		// User does not exist, create new admin
+		if err := db.Create(&adminUser).Error; err != nil {
+			log.Printf("Failed to create admin user: %v", err)
+			return err
+		}
+		log.Printf("Admin user '%s' created successfully.", adminUser.Email)
+	} else if result.Error == nil {
+		// User exists, update admin credentials and role
+		existingUser.PasswordHash = adminUser.PasswordHash
+		existingUser.Role = "admin" // Ensure role is admin
+		if err := db.Save(&existingUser).Error; err != nil {
+			log.Printf("Failed to update admin user '%s': %v", existingUser.Email, err)
+			return err
+		}
+		log.Printf("Admin user '%s' updated successfully.", existingUser.Email)
+	} else {
+		// Other database error
+		log.Printf("Database error checking for admin user: %v", result.Error)
+		return result.Error
+	}
+
+	return nil
+}
+
+func SetupHandlers(router *gin.Engine, db *gorm.DB) {
+	err := db.AutoMigrate(&models.Blog{}, &models.User{})
+	if err != nil {
+		log.Fatalf("Failed to auto migrate models: %v", err)
+	}
+	log.Println("Blog & User model auto-migrated successfully.")
+
+	if err := SetupAdminUser(db); err != nil {
+		log.Fatalf("Failed to setup admin user: %v", err)
+	}
 
 	homeController := controllers.NewHomeController(db)
 	healthController := controllers.NewHealthController(db)
 	blogController := controllers.NewBlogController(db)
+	userController := controllers.NewUserController(db)
 	routes.RegisterHomeRoutes(router, homeController, healthController)
 	routes.RegisterBlogRoutes(router, blogController)
+	routes.RegisterUserRoutes(router, userController)
 }

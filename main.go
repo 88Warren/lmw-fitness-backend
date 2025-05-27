@@ -21,11 +21,9 @@ func main() {
 
 	config.SetupHandlers(router, db)
 
-	// Use the port from values.yaml
-	port := "8082"
+	port := config.GetEnv("PORT", "8082")
 	fmt.Printf("Starting the server on port %s\n", port)
 
-	// Start the server on the specified port
 	if err := router.Run("0.0.0.0:" + port); err != nil {
 		log.Fatal("Failed to start the server:", err)
 	}
