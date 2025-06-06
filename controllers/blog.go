@@ -25,6 +25,21 @@ func (bc *BlogController) GetBlog(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, blogs)
 }
 
+func (bc *BlogController) GetBlogByID(ctx *gin.Context) {
+	id := ctx.Param("id")
+
+	var blog models.Blog
+	if result := bc.DB.First(&blog, id); result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "Blog post not found"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve blog post: " + result.Error.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, blog)
+}
+
 func (bc *BlogController) CreateBlog(ctx *gin.Context) {
 	var newBlog models.Blog
 	if err := ctx.ShouldBindJSON(&newBlog); err != nil {

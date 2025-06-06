@@ -10,6 +10,7 @@ import (
 
 func RegisterBlogRoutes(router *gin.Engine, bc *controllers.BlogController) {
 	router.GET("/api/blog", bc.GetBlog)
+	router.GET("/api/blog/:id", bc.GetBlogByID)
 
 	authenticated := router.Group("/api")
 	authenticated.Use(middleware.AuthMiddleware())

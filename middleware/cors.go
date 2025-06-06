@@ -1,7 +1,9 @@
 package middleware
 
 import (
+	"log"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -10,10 +12,22 @@ import (
 
 func CORSMiddleware() gin.HandlerFunc {
 	allowedOrigin := os.Getenv("ALLOWED_ORIGIN")
-	// log.Println("allowedOrigin: ", allowedOrigin)
+	log.Println("allowedOrigin: ", allowedOrigin)
+	allowCredentialsStr := os.Getenv("ALLOW_CREDENTIALS") // Get string "true" or "false"
+	allowCredentials, err := strconv.ParseBool(allowCredentialsStr)
+	if err != nil {
+		log.Printf("Warning: ALLOW_CREDENTIALS environment variable '%s' is not a valid boolean. Defaulting to false.", allowCredentialsStr)
+		allowCredentials = false
+	}
+	log.Println("AllowCredentials (parsed from .env): ", allowCredentials)
 
 	return cors.New(cors.Config{
-		AllowOrigins: []string{allowedOrigin},
+		AllowOriginFunc: func(origin string) bool {
+			if allowCredentials {
+				return origin == allowedOrigin
+			}
+			return origin == allowedOrigin || allowedOrigin == "*"
+		},
 		AllowMethods: []string{
 			"GET",
 			"POST",
@@ -36,7 +50,7 @@ func CORSMiddleware() gin.HandlerFunc {
 			"Content-Type",
 			"Content-Disposition",
 		},
-		AllowCredentials: false,
+		AllowCredentials: allowCredentials,
 		MaxAge:           12 * time.Hour,
 	})
 }
