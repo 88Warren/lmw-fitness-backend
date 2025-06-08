@@ -22,14 +22,14 @@ func ConnectToDB() {
 		os.Getenv("DB_SSLMODE"),
 	)
 
-	log.Printf("Attempting to connect to database at %s:%s", os.Getenv("DB_HOST"), os.Getenv("DB_PORT"))
+	// log.Printf("Attempting to connect to database at %s:%s", os.Getenv("DB_HOST"), os.Getenv("DB_PORT"))
 
 	var err error
 	maxRetries := 5
 	for i := 0; i < maxRetries; i++ {
 		DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 		if err == nil {
-			log.Println("Database connection established")
+			// log.Println("Database connection established")
 			return
 		}
 		log.Printf("Failed to connect to database (attempt %d/%d): %v", i+1, maxRetries, err)

@@ -9,7 +9,9 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/laurawarren88/LMW_Fitness/controllers"
 	"github.com/laurawarren88/LMW_Fitness/middleware"
+	"github.com/laurawarren88/LMW_Fitness/models"
 	"github.com/laurawarren88/LMW_Fitness/routes"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -26,12 +28,11 @@ func LoadEnv() {
 	err := godotenv.Load(envFile)
 	if err != nil {
 		log.Printf("Warning: No %s file found, relying on system environment variables", envFile)
-		// In Kubernetes, we rely on environment variables from ConfigMap and Secrets
 		if os.Getenv("KUBERNETES_SERVICE_HOST") != "" {
-			log.Printf("Running in Kubernetes, using environment variables from ConfigMap and Secrets")
+			// log.Printf("Running in Kubernetes, using environment variables from ConfigMap and Secrets")
 		}
 	} else {
-		log.Printf("Loaded environment variables from %s", envFile)
+		// log.Printf("Loaded environment variables from %s", envFile)
 	}
 }
 
@@ -50,9 +51,7 @@ func GetEnv(key string, fallback string) string {
 func SetupServer() *gin.Engine {
 	router := gin.Default()
 	router.Use(middleware.CORSMiddleware())
-	// Serve static files from the backend directory
-	// router.Static("/static", "./images")
-	router.Static("/images", "./images") // Adjust if needed based on working directory
+	router.Static("/images", "./images")
 	router.GET("/debug/images", func(c *gin.Context) {
 		log.Println("Hit /debug/images route")
 		files, err := os.ReadDir("./images")
@@ -72,8 +71,68 @@ func SetupServer() *gin.Engine {
 	return router
 }
 
+func SetupAdminUser(db *gorm.DB) error {
+	adminEmail := os.Getenv("ADMIN_EMAIL")
+	adminPassword := os.Getenv("ADMIN_PASSWORD")
+
+	if adminEmail == "" || adminPassword == "" {
+		// log.Println("ADMIN_EMAIL or ADMIN_PASSWORD environment variables not set. Skipping admin user setup.")
+		return nil
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("Failed to hash admin password: %v", err)
+		return err
+	}
+
+	adminUser := models.User{
+		Email:        adminEmail,
+		PasswordHash: string(hashedPassword),
+		Role:         "admin",
+	}
+
+	var existingUser models.User
+	result := db.Where("email = ?", adminUser.Email).First(&existingUser)
+
+	if result.Error == gorm.ErrRecordNotFound {
+		if err := db.Create(&adminUser).Error; err != nil {
+			log.Printf("Failed to create admin user: %v", err)
+			return err
+		}
+		// log.Printf("Admin user '%s' created successfully.", adminUser.Email)
+	} else if result.Error == nil {
+		existingUser.PasswordHash = adminUser.PasswordHash
+		existingUser.Role = "admin"
+		if err := db.Save(&existingUser).Error; err != nil {
+			log.Printf("Failed to update admin user '%s': %v", existingUser.Email, err)
+			return err
+		}
+		// log.Printf("Admin user '%s' updated successfully.", existingUser.Email)
+	} else {
+		// log.Printf("Database error checking for admin user: %v", result.Error)
+		return result.Error
+	}
+
+	return nil
+}
+
 func SetupHandlers(router *gin.Engine, db *gorm.DB) {
+	err := db.AutoMigrate(&models.Blog{}, &models.User{}, &models.PasswordResetToken{})
+	if err != nil {
+		log.Fatalf("Failed to auto migrate models: %v", err)
+	}
+	// log.Println("Blog & User model auto-migrated successfully.")
+
+	if err := SetupAdminUser(db); err != nil {
+		log.Fatalf("Failed to setup admin user: %v", err)
+	}
+
 	homeController := controllers.NewHomeController(db)
 	healthController := controllers.NewHealthController(db)
+	blogController := controllers.NewBlogController(db)
+	userController := controllers.NewUserController(db)
 	routes.RegisterHomeRoutes(router, homeController, healthController)
+	routes.RegisterBlogRoutes(router, blogController)
+	routes.RegisterUserRoutes(router, userController)
 }
