@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/88warren/lmw-fitness-backend/utils/email"
+	"github.com/88warren/lmw-fitness-backend/utils/emailtemplates"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -104,11 +105,13 @@ func (hc *HomeController) HandleContactForm(ctx *gin.Context) {
 		return
 	}
 
+	emailBody := emailtemplates.GenerateContactFormEmailBody(form.Name, form.Email, form.Subject, form.Message)
+
 	err := email.SendEmail(
 		os.Getenv("SMTP_FROM"),
 		os.Getenv("SMTP_TO"),
-		form.Subject,
-		"Name: "+form.Name+"\nEmail: "+form.Email+"\n\nMessage:\n"+form.Message,
+		"New Contact Form Submission: "+form.Subject,
+		emailBody,
 		form.Email,
 		smtpPassword,
 	)

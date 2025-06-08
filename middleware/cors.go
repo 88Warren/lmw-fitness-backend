@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -36,7 +37,6 @@ func CORSMiddleware() gin.HandlerFunc {
 		allowedOriginsList = []string{}
 	} else {
 		allowedOriginsList = strings.Split(envAllowedOrigins, ",")
-		// Trim spaces from each origin
 		for i, origin := range allowedOriginsList {
 			allowedOriginsList[i] = strings.TrimSpace(origin)
 		}
@@ -54,10 +54,11 @@ func CORSMiddleware() gin.HandlerFunc {
 	return cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool {
 			for _, allowed := range allowedOriginsList {
-				if origin == allowed || allowed == "*" {
+				if strings.TrimRight(origin, "/") == strings.TrimRight(allowed, "/") || allowed == "*" {
 					return true
 				}
 			}
+			fmt.Printf("Origin %s not allowed by CORS config\n", origin)
 			return false
 		},
 		AllowMethods: []string{
