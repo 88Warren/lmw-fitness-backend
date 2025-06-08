@@ -3,8 +3,8 @@ package controllers
 import (
 	"net/http"
 
+	"github.com/88warren/lmw-fitness-backend/models"
 	"github.com/gin-gonic/gin"
-	"github.com/laurawarren88/LMW_Fitness/models"
 	"gorm.io/gorm"
 )
 

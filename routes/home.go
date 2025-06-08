@@ -1,8 +1,8 @@
 package routes
 
 import (
+	"github.com/88warren/lmw-fitness-backend/controllers"
 	"github.com/gin-gonic/gin"
-	"github.com/laurawarren88/LMW_Fitness/controllers"
 )
 
 func RegisterHomeRoutes(router *gin.Engine, hc *controllers.HomeController, healthController *controllers.HealthController) {

@@ -11,10 +11,10 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/88warren/lmw-fitness-backend/models"
+	"github.com/88warren/lmw-fitness-backend/utils/email"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/laurawarren88/LMW_Fitness/models"
-	"github.com/laurawarren88/LMW_Fitness/utils/email"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

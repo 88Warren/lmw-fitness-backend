@@ -1,9 +1,9 @@
 package routes
 
 import (
+	"github.com/88warren/lmw-fitness-backend/controllers"
+	"github.com/88warren/lmw-fitness-backend/middleware"
 	"github.com/gin-gonic/gin"
-	"github.com/laurawarren88/LMW_Fitness/controllers"
-	"github.com/laurawarren88/LMW_Fitness/middleware"
 )
 
 func RegisterUserRoutes(router *gin.Engine, uc *controllers.UserController) {

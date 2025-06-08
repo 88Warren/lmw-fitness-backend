@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/88warren/lmw-fitness-backend/controllers"
+	"github.com/88warren/lmw-fitness-backend/middleware"
+	"github.com/88warren/lmw-fitness-backend/models"
+	"github.com/88warren/lmw-fitness-backend/routes"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"github.com/laurawarren88/LMW_Fitness/controllers"
-	"github.com/laurawarren88/LMW_Fitness/middleware"
-	"github.com/laurawarren88/LMW_Fitness/models"
-	"github.com/laurawarren88/LMW_Fitness/routes"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )

@@ -8,8 +8,8 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/88warren/lmw-fitness-backend/utils/email"
 	"github.com/gin-gonic/gin"
-	"github.com/laurawarren88/LMW_Fitness/utils/email"
 	"gorm.io/gorm"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
