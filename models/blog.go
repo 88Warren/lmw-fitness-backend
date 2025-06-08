@@ -11,4 +11,5 @@ type Blog struct {
 	Excerpt     string `json:"excerpt" binding:"required"`
 	FullContent string `json:"fullContent" binding:"required"`
 	IsFeatured  bool   `json:"isFeatured"`
+	Category    string `json:"category" binding:"required"`
 }

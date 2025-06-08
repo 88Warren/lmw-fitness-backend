@@ -22,8 +22,8 @@ func RegisterBlogRoutes(router *gin.Engine, bc *controllers.BlogController) {
 			userRole := c.MustGet("userRole").(string)
 			c.JSON(http.StatusOK, gin.H{"message": "Welcome, authenticated user!", "userID": userID, "email": userEmail, "role": userRole})
 		})
-		authenticated.POST("/blog", middleware.RoleMiddleware("admin"), bc.CreateBlog)    // Requires admin role
-		authenticated.PUT("/blog/:id", middleware.RoleMiddleware("admin"), bc.UpdateBlog) // Requires admin role
+		authenticated.POST("/blog", middleware.RoleMiddleware("admin"), bc.CreateBlog)
+		authenticated.PUT("/blog/:id", middleware.RoleMiddleware("admin"), bc.UpdateBlog)
 		authenticated.DELETE("/blog/:id", middleware.RoleMiddleware("admin"), bc.DeleteBlog)
 	}
 }

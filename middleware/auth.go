@@ -1,16 +1,14 @@
 package middleware
 
 import (
-	"log"
 	"net/http"
 	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5" // Ensure you use v5
+	"github.com/golang-jwt/jwt/v5"
 )
 
-// AuthMiddleware is a Gin middleware to authenticate requests using JWT
 func AuthMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		tokenString := ctx.GetHeader("Authorization")
@@ -33,13 +31,11 @@ func AuthMiddleware() gin.HandlerFunc {
 		// Get JWT secret from environment variables
 		jwtSecret := os.Getenv("JWT_SECRET")
 		if jwtSecret == "" {
-			log.Println("JWT_SECRET environment variable not set. Using a default (NOT SECURE FOR PRODUCTION!).")
-			jwtSecret = "supersecretjwtkey" // Fallback, should match the one in controllers/user_controller.go
+			// log.Println("JWT_SECRET environment variable not set. Using a default (NOT SECURE FOR PRODUCTION!).")
+			jwtSecret = "supersecretjwtkey"
 		}
 
-		// Parse and validate the token
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			// Validate the alg is what you expect:
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, jwt.ErrSignatureInvalid
 			}
@@ -47,7 +43,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		})
 
 		if err != nil {
-			log.Printf("Token validation error: %v", err) // Log the specific error
+			// log.Printf("Token validation error: %v", err)
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			ctx.Abort()
 			return
@@ -69,7 +65,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		// Extract user ID, email, and role from claims
-		userID, ok := claims["user_id"].(float64) // JWT numbers are float64 by default
+		userID, ok := claims["user_id"].(float64)
 		if !ok {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
 			ctx.Abort()
@@ -88,21 +84,18 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Set user information in the Gin context for subsequent handlers
-		ctx.Set("userID", uint(userID)) // Convert back to uint
+		ctx.Set("userID", uint(userID))
 		ctx.Set("userEmail", email)
 		ctx.Set("userRole", role)
 
-		ctx.Next() // Proceed to the next handler in the chain
+		ctx.Next()
 	}
 }
 
-// RoleMiddleware checks if the authenticated user has the required role
 func RoleMiddleware(requiredRole string) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		userRole, exists := ctx.Get("userRole")
 		if !exists {
-			// This indicates AuthMiddleware didn't run or didn't set the role
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "User role not found in context. AuthMiddleware might be missing."})
 			ctx.Abort()
 			return
@@ -114,6 +107,6 @@ func RoleMiddleware(requiredRole string) gin.HandlerFunc {
 			return
 		}
 
-		ctx.Next() // User has the required role, proceed
+		ctx.Next()
 	}
 }

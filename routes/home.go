@@ -6,15 +6,11 @@ import (
 )
 
 func RegisterHomeRoutes(router *gin.Engine, hc *controllers.HomeController, healthController *controllers.HealthController) {
-	// API routes
 	api := router.Group("/api")
 	{
 		api.GET("/", hc.GetHome)
 		api.POST("/contact", hc.HandleContactForm)
 		api.GET("/health/live", healthController.LivenessCheck)
 		api.GET("/health/ready", healthController.ReadinessCheck)
-		api.POST("/test", hc.TestEndpoint)
 	}
-
-	// Remove images route since we're using static file serving
 }

@@ -29,10 +29,10 @@ func LoadEnv() {
 	if err != nil {
 		log.Printf("Warning: No %s file found, relying on system environment variables", envFile)
 		if os.Getenv("KUBERNETES_SERVICE_HOST") != "" {
-			log.Printf("Running in Kubernetes, using environment variables from ConfigMap and Secrets")
+			// log.Printf("Running in Kubernetes, using environment variables from ConfigMap and Secrets")
 		}
 	} else {
-		log.Printf("Loaded environment variables from %s", envFile)
+		// log.Printf("Loaded environment variables from %s", envFile)
 	}
 }
 
@@ -76,8 +76,8 @@ func SetupAdminUser(db *gorm.DB) error {
 	adminPassword := os.Getenv("ADMIN_PASSWORD")
 
 	if adminEmail == "" || adminPassword == "" {
-		log.Println("ADMIN_EMAIL or ADMIN_PASSWORD environment variables not set. Skipping admin user setup.")
-		return nil // Not an error, just skipping setup
+		// log.Println("ADMIN_EMAIL or ADMIN_PASSWORD environment variables not set. Skipping admin user setup.")
+		return nil
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.DefaultCost)
@@ -89,31 +89,28 @@ func SetupAdminUser(db *gorm.DB) error {
 	adminUser := models.User{
 		Email:        adminEmail,
 		PasswordHash: string(hashedPassword),
-		Role:         "admin", // Set role to admin
+		Role:         "admin",
 	}
 
 	var existingUser models.User
 	result := db.Where("email = ?", adminUser.Email).First(&existingUser)
 
 	if result.Error == gorm.ErrRecordNotFound {
-		// User does not exist, create new admin
 		if err := db.Create(&adminUser).Error; err != nil {
 			log.Printf("Failed to create admin user: %v", err)
 			return err
 		}
-		log.Printf("Admin user '%s' created successfully.", adminUser.Email)
+		// log.Printf("Admin user '%s' created successfully.", adminUser.Email)
 	} else if result.Error == nil {
-		// User exists, update admin credentials and role
 		existingUser.PasswordHash = adminUser.PasswordHash
-		existingUser.Role = "admin" // Ensure role is admin
+		existingUser.Role = "admin"
 		if err := db.Save(&existingUser).Error; err != nil {
 			log.Printf("Failed to update admin user '%s': %v", existingUser.Email, err)
 			return err
 		}
-		log.Printf("Admin user '%s' updated successfully.", existingUser.Email)
+		// log.Printf("Admin user '%s' updated successfully.", existingUser.Email)
 	} else {
-		// Other database error
-		log.Printf("Database error checking for admin user: %v", result.Error)
+		// log.Printf("Database error checking for admin user: %v", result.Error)
 		return result.Error
 	}
 
@@ -121,11 +118,11 @@ func SetupAdminUser(db *gorm.DB) error {
 }
 
 func SetupHandlers(router *gin.Engine, db *gorm.DB) {
-	err := db.AutoMigrate(&models.Blog{}, &models.User{})
+	err := db.AutoMigrate(&models.Blog{}, &models.User{}, &models.PasswordResetToken{})
 	if err != nil {
 		log.Fatalf("Failed to auto migrate models: %v", err)
 	}
-	log.Println("Blog & User model auto-migrated successfully.")
+	// log.Println("Blog & User model auto-migrated successfully.")
 
 	if err := SetupAdminUser(db); err != nil {
 		log.Fatalf("Failed to setup admin user: %v", err)
