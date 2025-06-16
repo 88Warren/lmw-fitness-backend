@@ -50,6 +50,18 @@ func (nc *NewsletterController) Subscribe(ctx *gin.Context) {
 	brevoDOIRedirectURL := os.Getenv("BREVO_DOI_REDIRECT_URL")
 	brevoDOITemplateID := os.Getenv("BREVO_DOI_TEMPLATE_ID")
 
+	// Debug logging
+	log.Printf("Environment variables:")
+	if len(brevoAPIKey) > 5 {
+		log.Printf("BREVO_API_KEY: %s...", brevoAPIKey[:5])
+	} else {
+		log.Printf("BREVO_API_KEY: not set")
+	}
+	log.Printf("BREVO_LIST_ID: %s", brevoListID)
+	log.Printf("BREVO_API_URL: %s", brevoAPIURL)
+	log.Printf("BREVO_DOI_REDIRECT_URL: %s", brevoDOIRedirectURL)
+	log.Printf("BREVO_DOI_TEMPLATE_ID: %s", brevoDOITemplateID)
+
 	if brevoAPIKey == "" || brevoListID == "" || brevoAPIURL == "" {
 		log.Println("Brevo API environment variables not set. Cannot subscribe.")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Newsletter service not configured."})
@@ -72,6 +84,7 @@ func (nc *NewsletterController) Subscribe(ctx *gin.Context) {
 		"status":           "pending",
 		"templateId":       atoi(brevoDOITemplateID),
 		"redirectionUrl":   brevoDOIRedirectURL,
+		"doubleOptIn":      true,
 	}
 
 	jsonBody, err := json.Marshal(requestBody)
