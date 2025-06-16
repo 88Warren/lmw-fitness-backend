@@ -113,8 +113,8 @@ func (uc *UserController) LoginUser(ctx *gin.Context) {
 		return
 	}
 
-	log.Printf("Stored Hashed Password for %s: %s", user.Email, user.PasswordHash)
-	log.Printf("Login attempt plaintext password: %s", req.Password)
+	// log.Printf("Stored Hashed Password for %s: %s", user.Email, user.PasswordHash)
+	// log.Printf("Login attempt plaintext password: %s", req.Password)
 
 	// Compare provided password with hashed password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
@@ -236,7 +236,6 @@ func (uc *UserController) RequestPasswordReset(ctx *gin.Context) {
 	resetLink := fmt.Sprintf("%s/reset-password/%s", os.Getenv("ALLOWED_ORIGIN"), token)
 	emailSubject := "LMW Fitness - Password Reset Request"
 	emailBody := emailtemplates.GeneratePasswordResetEmailBody(user.Email, resetLink)
-
 	smtpPassword := getSMTPPasswordFromSecrets()
 
 	if err := email.SendEmail(
@@ -360,7 +359,7 @@ func (uc *UserController) ResetPassword(ctx *gin.Context) {
 		return
 	}
 
-	log.Printf("New Hashed Password for user %d: %s", user.ID, string(hashedPassword))
+	// log.Printf("New Hashed Password for user %d: %s", user.ID, string(hashedPassword))
 
 	// 6. Update the user's password in the database
 	user.PasswordHash = string(hashedPassword)

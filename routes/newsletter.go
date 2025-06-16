@@ -10,6 +10,5 @@ func RegisterNewsletterRoutes(router *gin.Engine, nc *controllers.NewsletterCont
 
 	{
 		newsletterGroup.POST("/subscribe", nc.Subscribe)
-		newsletterGroup.GET("/confirm/:token", nc.ConfirmSubscription)
 	}
 }

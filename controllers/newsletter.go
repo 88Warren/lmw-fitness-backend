@@ -1,15 +1,15 @@
 package controllers
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
-	"github.com/88warren/lmw-fitness-backend/models"
-	"github.com/88warren/lmw-fitness-backend/utils/email"
-	"github.com/88warren/lmw-fitness-backend/utils/emailtemplates"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -20,6 +20,16 @@ type NewsletterController struct {
 
 func NewNewsletterController(db *gorm.DB) *NewsletterController {
 	return &NewsletterController{DB: db}
+}
+
+type BrevoAddContactResponse struct {
+	Email string `json:"email"`
+	ID    int    `json:"id"`
+}
+
+type BrevoErrorResponse struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
 }
 
 type SubscribeRequest struct {
@@ -33,90 +43,90 @@ func (nc *NewsletterController) Subscribe(ctx *gin.Context) {
 		return
 	}
 
-	var existingSubscriber models.NewsletterSubscriber
-	if nc.DB.Where("email = ?", req.Email).First(&existingSubscriber).Error == nil {
-		if existingSubscriber.IsConfirmed {
-			ctx.JSON(http.StatusOK, gin.H{"message": "You are already subscribed to our newsletter!"})
-			return
-		}
+	brevoAPIKey := os.Getenv("BREVO_API_KEY")
+	brevoListID := os.Getenv("BREVO_LIST_ID")
+	brevoAPIURL := os.Getenv("BREVO_API_URL")
+	brevoDOIRedirectURL := os.Getenv("BREVO_DOI_REDIRECT_URL")
+	brevoDOITemplateID := os.Getenv("BREVO_DOI_TEMPLATE_ID")
 
-		if err := nc.sendConfirmationEmail(existingSubscriber); err != nil {
-			log.Printf("Error resending confirmation email: %v", err)
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resend confirmation email."})
-			return
-		}
-		ctx.JSON(http.StatusOK, gin.H{"message": "A confirmation email has been sent. Please check your inbox to confirm your subscription."})
+	if brevoAPIKey == "" || brevoListID == "" || brevoAPIURL == "" {
+		// log.Println("Brevo API environment variables not set. Cannot subscribe.")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Newsletter service not configured."})
 		return
 	}
 
-	token, err := generateSecureToken(32)
+	url := fmt.Sprintf("%s/contacts", brevoAPIURL)
+
+	requestBody := map[string]interface{}{
+		"email": req.Email,
+		"attributes": map[string]string{
+			"SMS":       "",
+			"FIRSTNAME": "",
+			"LASTNAME":  "",
+		},
+		"listIds":          []int{atoi(brevoListID)},
+		"updateEnabled":    true,
+		"emailBlacklisted": false,
+		"smsBlacklisted":   false,
+		"status":           "pending",
+		"templateId":       atoi(brevoDOITemplateID),
+		"redirectionUrl":   brevoDOIRedirectURL,
+	}
+
+	jsonBody, err := json.Marshal(requestBody)
 	if err != nil {
-		log.Printf("Error generating confirmation token: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate confirmation token."})
+		log.Printf("Error marshaling Brevo request body: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error."})
 		return
 	}
 
-	newSubscriber := models.NewsletterSubscriber{
-		Email:        req.Email,
-		SubscribedAt: time.Now(),
-		IsConfirmed:  false,
-		ConfirmToken: token,
-	}
+	// log.Printf("Brevo Request URL: %s", url)
+	// log.Printf("Brevo Request Body: %s", string(jsonBody))
+	// log.Printf("Using API Key (first 5 chars): %s...", brevoAPIKey[:5])
 
-	if result := nc.DB.Create(&newSubscriber); result.Error != nil {
-		log.Printf("Error creating newsletter subscriber: %v", result.Error)
+	client := &http.Client{Timeout: 10 * time.Second}
+	reqAPI, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		log.Printf("Error creating Brevo API request: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to subscribe."})
 		return
 	}
 
-	if err := nc.sendConfirmationEmail(newSubscriber); err != nil {
-		log.Printf("Error sending confirmation email: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send confirmation email."})
+	reqAPI.Header.Set("Content-Type", "application/json")
+	reqAPI.Header.Set("api-key", brevoAPIKey)
+
+	resp, err := client.Do(reqAPI)
+	if err != nil {
+		log.Printf("Error sending request to Brevo API: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to subscribe. Network error."})
 		return
 	}
+	defer resp.Body.Close()
 
-	ctx.JSON(http.StatusCreated, gin.H{"message": "Subscription successful! Please check your inbox to confirm your subscription."})
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		ctx.JSON(http.StatusOK, gin.H{"message": "Subscription successful! Please check your inbox to confirm."})
+	} else {
+		var errorBody BrevoErrorResponse
+		if err := json.NewDecoder(resp.Body).Decode(&errorBody); err != nil {
+			log.Printf("Error decoding Brevo error response: %v", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to subscribe. Unknown error from service."})
+			return
+		}
+		log.Printf("Brevo API error (Status: %d, Code: %s): %s", resp.StatusCode, errorBody.Code, errorBody.Message)
+
+		if errorBody.Code == "duplicate_parameter" || errorBody.Code == "already_exist" {
+			ctx.JSON(http.StatusOK, gin.H{"message": "You are already subscribed to our newsletter! Please check your inbox for confirmation."})
+		} else {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to subscribe: %s", errorBody.Message)})
+		}
+	}
 }
 
-func (nc *NewsletterController) ConfirmSubscription(ctx *gin.Context) {
-	token := ctx.Param("token")
-
-	var subscriber models.NewsletterSubscriber
-	if nc.DB.Where("confirm_token = ?", token).First(&subscriber).Error != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or expired confirmation link."})
-		return
+func atoi(s string) int {
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		log.Printf("Error converting string to int: %v", err)
+		return 0
 	}
-
-	if subscriber.IsConfirmed {
-		ctx.JSON(http.StatusOK, gin.H{"message": "Your subscription is already confirmed!"})
-		return
-	}
-
-	subscriber.IsConfirmed = true
-	subscriber.ConfirmToken = ""
-	if result := nc.DB.Save(&subscriber); result.Error != nil {
-		log.Printf("Error confirming subscription: %v", result.Error)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to confirm subscription."})
-		return
-	}
-
-	ctx.JSON(http.StatusOK, gin.H{"message": "Subscription confirmed successfully!"})
-}
-
-func (nc *NewsletterController) sendConfirmationEmail(subscriber models.NewsletterSubscriber) error {
-	confirmLink := fmt.Sprintf("%s/newsletter/confirm/%s", os.Getenv("ALLOWED_ORIGIN"), subscriber.ConfirmToken)
-	emailSubject := "Please confirm your LMW Fitness newsletter subscription"
-
-	emailBody := emailtemplates.GenerateNewsletterConfirmationEmailBody(subscriber.Email, confirmLink)
-
-	smtpPassword := getSMTPPasswordFromSecrets()
-
-	return email.SendEmail(
-		os.Getenv("SMTP_FROM"),
-		subscriber.Email,
-		emailSubject,
-		emailBody,
-		"",
-		smtpPassword,
-	)
+	return i
 }
