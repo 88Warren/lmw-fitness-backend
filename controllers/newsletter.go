@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -102,6 +103,17 @@ func (nc *NewsletterController) Subscribe(ctx *gin.Context) {
 		return
 	}
 	defer resp.Body.Close()
+
+	// Read and log the response body
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("Error reading response body: %v", err)
+	} else {
+		log.Printf("Brevo API Response (Status: %d): %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	// Create a new reader for the response body since we consumed it
+	resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		ctx.JSON(http.StatusOK, gin.H{"message": "Subscription successful! Please check your inbox to confirm."})
