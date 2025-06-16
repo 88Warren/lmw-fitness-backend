@@ -3,9 +3,9 @@ package routes
 import (
 	"net/http"
 
+	"github.com/88warren/lmw-fitness-backend/controllers"
+	"github.com/88warren/lmw-fitness-backend/middleware"
 	"github.com/gin-gonic/gin"
-	"github.com/laurawarren88/LMW_Fitness/controllers"
-	"github.com/laurawarren88/LMW_Fitness/middleware"
 )
 
 func RegisterBlogRoutes(router *gin.Engine, bc *controllers.BlogController) {

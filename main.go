@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 
-	"github.com/laurawarren88/LMW_Fitness/config"
-	"github.com/laurawarren88/LMW_Fitness/database"
+	"github.com/88warren/lmw-fitness-backend/config"
+	"github.com/88warren/lmw-fitness-backend/database"
 )
 
 func init() {

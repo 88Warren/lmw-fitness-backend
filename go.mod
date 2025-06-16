@@ -1,4 +1,4 @@
-module github.com/laurawarren88/LMW_Fitness
+module github.com/88warren/lmw-fitness-backend
 
 go 1.24.0
 

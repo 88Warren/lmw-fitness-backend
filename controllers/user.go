@@ -11,10 +11,11 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/88warren/lmw-fitness-backend/models"
+	"github.com/88warren/lmw-fitness-backend/utils/email"
+	"github.com/88warren/lmw-fitness-backend/utils/emailtemplates"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/laurawarren88/LMW_Fitness/models"
-	"github.com/laurawarren88/LMW_Fitness/utils/email"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,7 +31,10 @@ func NewUserController(db *gorm.DB) *UserController {
 	return &UserController{DB: db}
 }
 
-var passwordRegex = regexp.MustCompile(`^(?=.*[A-Z])(?=.*[!@#$%^&*])(.{8,})$`)
+var (
+	hasUpperCase   = regexp.MustCompile(`[A-Z]`)
+	hasSpecialChar = regexp.MustCompile(`[!@#$^&*]`)
+)
 
 func (uc *UserController) RegisterUser(ctx *gin.Context) {
 	var req models.RegisterRequest
@@ -109,8 +113,8 @@ func (uc *UserController) LoginUser(ctx *gin.Context) {
 		return
 	}
 
-	log.Printf("Stored Hashed Password for %s: %s", user.Email, user.PasswordHash)
-	log.Printf("Login attempt plaintext password: %s", req.Password)
+	// log.Printf("Stored Hashed Password for %s: %s", user.Email, user.PasswordHash)
+	// log.Printf("Login attempt plaintext password: %s", req.Password)
 
 	// Compare provided password with hashed password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
@@ -211,7 +215,7 @@ func (uc *UserController) RequestPasswordReset(ctx *gin.Context) {
 		return
 	}
 
-	expiresAt := time.Now().Add(time.Hour)
+	expiresAt := time.Now().Add(time.Hour * 12)
 
 	// 2. Save token to database, invalidate any existing tokens for this user
 	uc.DB.Where("user_id = ?", user.ID).Delete(&models.PasswordResetToken{})
@@ -231,20 +235,7 @@ func (uc *UserController) RequestPasswordReset(ctx *gin.Context) {
 	// 3. Send email with reset link
 	resetLink := fmt.Sprintf("%s/reset-password/%s", os.Getenv("ALLOWED_ORIGIN"), token)
 	emailSubject := "LMW Fitness - Password Reset Request"
-	emailBody := fmt.Sprintf(`
-        Hello %s,
-
-        You have requested to reset your password for your LMW Fitness account.
-
-        Please click on the following link to reset your password:
-        %s
-
-        This link will expire in 1 hour. If you did not request a password reset, please ignore this email.
-
-        Best regards,
-        The LMW Fitness Team
-    `, user.Email, resetLink)
-
+	emailBody := emailtemplates.GeneratePasswordResetEmailBody(user.Email, resetLink)
 	smtpPassword := getSMTPPasswordFromSecrets()
 
 	if err := email.SendEmail(
@@ -295,9 +286,15 @@ func ValidatePassword(password string) error {
 	if len(password) < 8 {
 		return fmt.Errorf("password must be at least 8 characters long")
 	}
-	if !passwordRegex.MatchString(password) {
-		return fmt.Errorf("password must contain at least one capital letter and one special character (!@#$%^&*)")
+
+	if !hasUpperCase.MatchString(password) {
+		return fmt.Errorf("password must contain at least one capital letter")
 	}
+
+	if !hasSpecialChar.MatchString(password) {
+		return fmt.Errorf("password must contain at least one special character (!@#$^&*)")
+	}
+
 	return nil
 }
 
@@ -362,7 +359,7 @@ func (uc *UserController) ResetPassword(ctx *gin.Context) {
 		return
 	}
 
-	log.Printf("New Hashed Password for user %d: %s", user.ID, string(hashedPassword))
+	// log.Printf("New Hashed Password for user %d: %s", user.ID, string(hashedPassword))
 
 	// 6. Update the user's password in the database
 	user.PasswordHash = string(hashedPassword)

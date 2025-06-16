@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -17,18 +18,14 @@ func AuthMiddleware() gin.HandlerFunc {
 			ctx.Abort()
 			return
 		}
-
-		// Check if the token starts with "Bearer "
 		if !strings.HasPrefix(tokenString, "Bearer ") {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token format. Must be 'Bearer <token>'"})
 			ctx.Abort()
 			return
 		}
 
-		// Extract the actual token string
 		tokenString = strings.TrimPrefix(tokenString, "Bearer ")
 
-		// Get JWT secret from environment variables
 		jwtSecret := os.Getenv("JWT_SECRET")
 		if jwtSecret == "" {
 			// log.Println("JWT_SECRET environment variable not set. Using a default (NOT SECURE FOR PRODUCTION!).")
@@ -43,20 +40,18 @@ func AuthMiddleware() gin.HandlerFunc {
 		})
 
 		if err != nil {
-			// log.Printf("Token validation error: %v", err)
+			log.Printf("Token validation error: %v", err)
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			ctx.Abort()
 			return
 		}
 
-		// Check if the token is valid
 		if !token.Valid {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			ctx.Abort()
 			return
 		}
 
-		// Extract claims from the token
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok || !token.Valid {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
@@ -64,7 +59,6 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Extract user ID, email, and role from claims
 		userID, ok := claims["user_id"].(float64)
 		if !ok {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})

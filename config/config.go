@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/88warren/lmw-fitness-backend/controllers"
+	"github.com/88warren/lmw-fitness-backend/middleware"
+	"github.com/88warren/lmw-fitness-backend/models"
+	"github.com/88warren/lmw-fitness-backend/routes"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"github.com/laurawarren88/LMW_Fitness/controllers"
-	"github.com/laurawarren88/LMW_Fitness/middleware"
-	"github.com/laurawarren88/LMW_Fitness/models"
-	"github.com/laurawarren88/LMW_Fitness/routes"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -118,7 +118,7 @@ func SetupAdminUser(db *gorm.DB) error {
 }
 
 func SetupHandlers(router *gin.Engine, db *gorm.DB) {
-	err := db.AutoMigrate(&models.Blog{}, &models.User{}, &models.PasswordResetToken{})
+	err := db.AutoMigrate(&models.Blog{}, &models.User{}, &models.PasswordResetToken{}, &models.NewsletterSubscriber{})
 	if err != nil {
 		log.Fatalf("Failed to auto migrate models: %v", err)
 	}
@@ -132,7 +132,9 @@ func SetupHandlers(router *gin.Engine, db *gorm.DB) {
 	healthController := controllers.NewHealthController(db)
 	blogController := controllers.NewBlogController(db)
 	userController := controllers.NewUserController(db)
+	newsletterController := controllers.NewNewsletterController(db)
 	routes.RegisterHomeRoutes(router, homeController, healthController)
 	routes.RegisterBlogRoutes(router, blogController)
 	routes.RegisterUserRoutes(router, userController)
+	routes.RegisterNewsletterRoutes(router, newsletterController)
 }

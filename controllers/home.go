@@ -8,8 +8,9 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/88warren/lmw-fitness-backend/utils/email"
+	"github.com/88warren/lmw-fitness-backend/utils/emailtemplates"
 	"github.com/gin-gonic/gin"
-	"github.com/laurawarren88/LMW_Fitness/utils/email"
 	"gorm.io/gorm"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -32,57 +33,13 @@ type ContactForm struct {
 	Token   string `json:"token"`
 }
 
-// var allowedOrigins []string
-
-// func init() {
-// 	envAllowedOrigins := os.Getenv("ALLOWED_ORIGIN")
-// 	if envAllowedOrigins == "" {
-// 		// log.Println("WARNING: ALLOWED_ORIGIN environment variable is not set. CORS might be misconfigured.")
-// 		allowedOrigins = []string{}
-// 	} else {
-// 		allowedOrigins = strings.Split(envAllowedOrigins, ",")
-// 		// log.Printf("CORS allowed origins: %v", allowedOrigins)
-// 	}
-// }
-
-// func CheckOrigin(origin string) string {
-// 	for _, allowed := range allowedOrigins {
-// 		if origin == allowed {
-// 			return allowed
-// 		}
-// 	}
-// 	return ""
-// }
-
 func (hc *HomeController) GetHome(ctx *gin.Context) {
-	// origin := ctx.GetHeader("Origin")
-	// if allowed := CheckOrigin(origin); allowed != "" {
-	// 	ctx.Header("Access-Control-Allow-Origin", allowed)
-	// }
-
-	// ctx.Header("Access-Control-Allow-Credentials", "true")
-	// ctx.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	// ctx.Header("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization")
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "Welcome to the Home Page",
 	})
 }
 
 func (hc *HomeController) HandleContactForm(ctx *gin.Context) {
-	// origin := ctx.GetHeader("Origin")
-	// if allowed := CheckOrigin(origin); allowed != "" {
-	// 	ctx.Header("Access-Control-Allow-Origin", allowed)
-	// } else {
-	// 	ctx.AbortWithStatus(http.StatusForbidden)
-	// 	return
-	// }
-
-	// ctx.Header("Access-Control-Allow-Credentials", "true")
-	// ctx.Header("Access-Control-Allow-Methods", "POST, OPTIONS")
-	// ctx.Header("Access-Control-Allow-Headers", "Content-Type, Accept")
-	// log.Println("Received contact form request")
-	// log.Printf("Contact form endpoint hit with path: %s", ctx.Request.URL.Path)
-	// log.Printf("Request headers: %v", ctx.Request.Header)
 	var form ContactForm
 	if err := ctx.ShouldBindJSON(&form); err != nil {
 		log.Printf("Form binding error: %v", err)
@@ -104,11 +61,13 @@ func (hc *HomeController) HandleContactForm(ctx *gin.Context) {
 		return
 	}
 
+	emailBody := emailtemplates.GenerateContactFormEmailBody(form.Name, form.Email, form.Subject, form.Message)
+
 	err := email.SendEmail(
 		os.Getenv("SMTP_FROM"),
 		os.Getenv("SMTP_TO"),
-		form.Subject,
-		"Name: "+form.Name+"\nEmail: "+form.Email+"\n\nMessage:\n"+form.Message,
+		"New Contact Form Submission: "+form.Subject,
+		emailBody,
 		form.Email,
 		smtpPassword,
 	)
@@ -147,49 +106,6 @@ func getK8sSecrets() (string, string) {
 
 	return recaptchaSecret, smtpPassword
 }
-
-// func sendEmail(name, email, subject, body, smtpPassword string) error {
-
-// 	// log.Printf("SMTP Config - Host: %s, Port: %s, From: %s, To: %s",
-// 	// 	os.Getenv("SMTP_HOST"),
-// 	// 	os.Getenv("SMTP_PORT"),
-// 	// 	os.Getenv("SMTP_FROM"),
-// 	// 	os.Getenv("SMTP_TO"))
-
-// 	// log.Printf("SMTP_PASSWORD length: %d", len(smtpPassword))
-
-// 	m := gomail.NewMessage()
-// 	m.SetHeader("From", os.Getenv("SMTP_FROM"))
-// 	m.SetHeader("To", os.Getenv("SMTP_TO"))
-// 	m.SetHeader("Reply-To", email)
-// 	m.SetHeader("Subject", subject)
-// 	m.SetBody("text/html", "Name: "+name+"\nEmail: "+email+"\n\nMessage:\n"+body)
-
-// 	port, err := strconv.Atoi(os.Getenv("SMTP_PORT"))
-// 	if err != nil {
-// 		log.Printf("Error converting SMTP_PORT to int: %v", err)
-// 		return fmt.Errorf("invalid SMTP_PORT configuration")
-// 	}
-
-// 	d := gomail.NewDialer(
-// 		os.Getenv("SMTP_HOST"),
-// 		port,
-// 		os.Getenv("SMTP_USERNAME"),
-// 		smtpPassword,
-// 	)
-// 	d.TLSConfig = &tls.Config{
-// 		ServerName: os.Getenv("SMTP_HOST"),
-// 	}
-
-// 	// log.Printf("Using SMTP credentials: %s / %s", os.Getenv("SMTP_USERNAME"), smtpPassword)
-
-// 	// log.Println("Sending...")
-// 	if err := d.DialAndSend(m); err != nil {
-// 		log.Fatalf("Send failed: %v", err)
-// 	}
-// 	// log.Println("Sent.")
-// 	return nil
-// }
 
 func verifyRecaptcha(token string) bool {
 	secret := os.Getenv("RECAPTCHA_SECRET")

@@ -1,8 +1,8 @@
 package middleware
 
 import (
+	"github.com/88warren/lmw-fitness-backend/database"
 	"github.com/gin-gonic/gin"
-	"github.com/laurawarren88/LMW_Fitness/database"
 )
 
 func DBMiddleware() gin.HandlerFunc {
