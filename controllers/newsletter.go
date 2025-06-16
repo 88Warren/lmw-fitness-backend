@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -50,7 +51,7 @@ func (nc *NewsletterController) Subscribe(ctx *gin.Context) {
 	brevoDOITemplateID := os.Getenv("BREVO_DOI_TEMPLATE_ID")
 
 	if brevoAPIKey == "" || brevoListID == "" || brevoAPIURL == "" {
-		// log.Println("Brevo API environment variables not set. Cannot subscribe.")
+		log.Println("Brevo API environment variables not set. Cannot subscribe.")
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Newsletter service not configured."})
 		return
 	}
@@ -80,9 +81,9 @@ func (nc *NewsletterController) Subscribe(ctx *gin.Context) {
 		return
 	}
 
-	// log.Printf("Brevo Request URL: %s", url)
-	// log.Printf("Brevo Request Body: %s", string(jsonBody))
-	// log.Printf("Using API Key (first 5 chars): %s...", brevoAPIKey[:5])
+	log.Printf("Brevo Request URL: %s", url)
+	log.Printf("Brevo Request Body: %s", string(jsonBody))
+	log.Printf("Using API Key (first 5 chars): %s...", brevoAPIKey[:5])
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	reqAPI, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
@@ -102,6 +103,17 @@ func (nc *NewsletterController) Subscribe(ctx *gin.Context) {
 		return
 	}
 	defer resp.Body.Close()
+
+	// Read and log the response body
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("Error reading response body: %v", err)
+	} else {
+		log.Printf("Brevo API Response (Status: %d): %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	// Create a new reader for the response body since we consumed it
+	resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		ctx.JSON(http.StatusOK, gin.H{"message": "Subscription successful! Please check your inbox to confirm."})
