@@ -52,11 +52,11 @@ func (hc *HomeController) HandleContactForm(ctx *gin.Context) {
 
 	_, smtpPassword := getK8sSecrets()
 
-	// log.Printf("Form data received: %+v", form)
-	// log.Printf("reCAPTCHA token received: %s", form.Token)
+	log.Printf("Form data received: %+v", form)
+	log.Printf("reCAPTCHA token received: %s", form.Token)
 
 	if !verifyRecaptcha(form.Token) {
-		// log.Printf("reCAPTCHA verification failed for token: %s", form.Token)
+		log.Printf("reCAPTCHA verification failed for token: %s", form.Token)
 		ctx.JSON(http.StatusForbidden, gin.H{"error": "reCAPTCHA verification failed"})
 		return
 	}
@@ -111,8 +111,8 @@ func verifyRecaptcha(token string) bool {
 	secret := os.Getenv("RECAPTCHA_SECRET")
 	verifyURL := "https://www.google.com/recaptcha/api/siteverify"
 
-	// log.Printf("Verifying reCAPTCHA with secret: %s, token: %s", secret, token)
-	// log.Printf("Using RECAPTCHA_SECRET: %s", secret)
+	log.Printf("Verifying reCAPTCHA with secret: %s, token: %s", secret, token)
+	log.Printf("Using RECAPTCHA_SECRET: %s", secret)
 
 	resp, err := http.PostForm(verifyURL, url.Values{
 		"secret":   {secret},
@@ -136,7 +136,7 @@ func verifyRecaptcha(token string) bool {
 		return false
 	}
 
-	// log.Printf("reCAPTCHA verification result: %+v", result)
-	// log.Printf("Using RECAPTCHA_SECRET: %s", secret)
+	log.Printf("reCAPTCHA verification result: %+v", result)
+	log.Printf("Using RECAPTCHA_SECRET: %s", secret)
 	return result.Success
 }
