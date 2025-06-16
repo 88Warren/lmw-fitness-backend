@@ -84,6 +84,7 @@ func (nc *NewsletterController) Subscribe(ctx *gin.Context) {
 		"status":           "pending",
 		"templateId":       atoi(brevoDOITemplateID),
 		"redirectionUrl":   brevoDOIRedirectURL,
+		"doubleOptIn":      true,
 	}
 
 	jsonBody, err := json.Marshal(requestBody)
