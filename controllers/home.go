@@ -52,8 +52,8 @@ func (hc *HomeController) HandleContactForm(ctx *gin.Context) {
 
 	_, smtpPassword := getK8sSecrets()
 
-	log.Printf("Form data received: %+v", form)
-	log.Printf("reCAPTCHA token received: %s", form.Token)
+	// log.Printf("Form data received: %+v", form)
+	// log.Printf("reCAPTCHA token received: %s", form.Token)
 
 	if !verifyRecaptcha(form.Token) {
 		log.Printf("reCAPTCHA verification failed for token: %s", form.Token)
@@ -81,25 +81,23 @@ func (hc *HomeController) HandleContactForm(ctx *gin.Context) {
 }
 
 func getK8sSecrets() (string, string) {
-	// First try environment variables
 	recaptchaSecret := os.Getenv("RECAPTCHA_SECRET")
 	smtpPassword := os.Getenv("SMTP_PASSWORD")
 
-	log.Printf("Initial environment variables - RECAPTCHA_SECRET: %s, SMTP_PASSWORD: %s",
-		func() string {
-			if len(recaptchaSecret) > 5 {
-				return recaptchaSecret[:5] + "..."
-			}
-			return "not set"
-		}(),
-		func() string {
-			if len(smtpPassword) > 5 {
-				return smtpPassword[:5] + "..."
-			}
-			return "not set"
-		}())
+	// log.Printf("Initial environment variables - RECAPTCHA_SECRET: %s, SMTP_PASSWORD: %s",
+	// 	func() string {
+	// 		if len(recaptchaSecret) > 5 {
+	// 			return recaptchaSecret[:5] + "..."
+	// 		}
+	// 		return "not set"
+	// 	}(),
+	// 	func() string {
+	// 		if len(smtpPassword) > 5 {
+	// 			return smtpPassword[:5] + "..."
+	// 		}
+	// 		return "not set"
+	// 	}())
 
-	// If we're in Kubernetes, try to get secrets from the cluster
 	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" {
 		config, err := rest.InClusterConfig()
 		if err != nil {
@@ -119,7 +117,7 @@ func getK8sSecrets() (string, string) {
 			secretName = "lmw-fitness-api-secrets"
 		}
 
-		log.Printf("Attempting to get secret: %s", secretName)
+		// log.Printf("Attempting to get secret: %s", secretName)
 
 		secret, err := clientset.CoreV1().Secrets("lmw-fitness").Get(ctx, secretName, metav1.GetOptions{})
 		if err != nil {
@@ -134,19 +132,19 @@ func getK8sSecrets() (string, string) {
 			smtpPassword = string(secret.Data["SMTP_PASSWORD"])
 		}
 
-		log.Printf("Secrets from Kubernetes - RECAPTCHA_SECRET: %s, SMTP_PASSWORD: %s",
-			func() string {
-				if len(recaptchaSecret) > 5 {
-					return recaptchaSecret[:5] + "..."
-				}
-				return "not set"
-			}(),
-			func() string {
-				if len(smtpPassword) > 5 {
-					return smtpPassword[:5] + "..."
-				}
-				return "not set"
-			}())
+		// log.Printf("Secrets from Kubernetes - RECAPTCHA_SECRET: %s, SMTP_PASSWORD: %s",
+		// 	func() string {
+		// 		if len(recaptchaSecret) > 5 {
+		// 			return recaptchaSecret[:5] + "..."
+		// 		}
+		// 		return "not set"
+		// 	}(),
+		// 	func() string {
+		// 		if len(smtpPassword) > 5 {
+		// 			return smtpPassword[:5] + "..."
+		// 		}
+		// 		return "not set"
+		// 	}())
 	}
 
 	return recaptchaSecret, smtpPassword
@@ -156,13 +154,13 @@ func verifyRecaptcha(token string) bool {
 	secret, _ := getK8sSecrets()
 	verifyURL := "https://www.google.com/recaptcha/api/siteverify"
 
-	log.Printf("Verifying reCAPTCHA with token: %s", token)
-	log.Printf("Using RECAPTCHA_SECRET: %s", func() string {
-		if len(secret) > 5 {
-			return secret[:5] + "..."
-		}
-		return "not set"
-	}())
+	// log.Printf("Verifying reCAPTCHA with token: %s", token)
+	// log.Printf("Using RECAPTCHA_SECRET: %s", func() string {
+	// 	if len(secret) > 5 {
+	// 		return secret[:5] + "..."
+	// 	}
+	// 	return "not set"
+	// }())
 
 	resp, err := http.PostForm(verifyURL, url.Values{
 		"secret":   {secret},
@@ -186,6 +184,6 @@ func verifyRecaptcha(token string) bool {
 		return false
 	}
 
-	log.Printf("reCAPTCHA verification result: %+v", result)
+	// log.Printf("reCAPTCHA verification result: %+v", result)
 	return result.Success
 }
