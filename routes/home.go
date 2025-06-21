@@ -5,12 +5,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterHomeRoutes(router *gin.Engine, hc *controllers.HomeController, healthController *controllers.HealthController) {
+func RegisterHomeRoutes(router *gin.Engine, hc *controllers.HomeController) {
 	api := router.Group("/api")
 	{
 		api.GET("/", hc.GetHome)
 		api.POST("/contact", hc.HandleContactForm)
-		api.GET("/health/live", healthController.LivenessCheck)
-		api.GET("/health/ready", healthController.ReadinessCheck)
 	}
 }
