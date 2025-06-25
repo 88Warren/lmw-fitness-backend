@@ -1,5 +1,3 @@
 # LMW Fitness
 
 ## Description
-
-test
