@@ -47,7 +47,7 @@ func (nc *NewsletterController) Subscribe(ctx *gin.Context) {
 	brevoAPIKey := os.Getenv("BREVO_API_KEY")
 	brevoListID := os.Getenv("NEWSLETTER_BREVO_LIST_ID")
 	brevoAPIURL := os.Getenv("BREVO_API_URL")
-	brevoDOIRedirectURL := os.Getenv("BREVO_DOI_REDIRECT_URL")
+	brevoDOIRedirectURL := os.Getenv("BREVO_NEWSLETTER_DOI_REDIRECT_URL")
 	brevoDOITemplateID := os.Getenv("BREVO_NEWSLETTER_DOI_TEMPLATE_ID")
 
 	// log.Printf("Environment variables:")
@@ -58,7 +58,7 @@ func (nc *NewsletterController) Subscribe(ctx *gin.Context) {
 	// }
 	// log.Printf("NEWSLETTER_BREVO_LIST_ID: %s", brevoListID)
 	// log.Printf("BREVO_API_URL: %s", brevoAPIURL)
-	// log.Printf("BREVO_DOI_REDIRECT_URL: %s", brevoDOIRedirectURL)
+	// log.Printf("BREVO_NEWSLETTER_DOI_REDIRECT_URL: %s", brevoDOIRedirectURL)
 	// log.Printf("BREVO_NEWSLETTER_DOI_TEMPLATE_ID: %s", brevoDOITemplateID)
 
 	if brevoAPIKey == "" || brevoListID == "" || brevoAPIURL == "" {
