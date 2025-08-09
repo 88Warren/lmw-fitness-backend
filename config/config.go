@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/88warren/lmw-fitness-backend/controllers"
+	"github.com/88warren/lmw-fitness-backend/database"
 	"github.com/88warren/lmw-fitness-backend/middleware"
 	"github.com/88warren/lmw-fitness-backend/models"
 	"github.com/88warren/lmw-fitness-backend/routes"
@@ -95,13 +96,14 @@ func SetupAdminUser(db *gorm.DB) error {
 	var existingUser models.User
 	result := db.Where("email = ?", adminUser.Email).First(&existingUser)
 
-	if result.Error == gorm.ErrRecordNotFound {
+	switch {
+	case result.Error == gorm.ErrRecordNotFound:
 		if err := db.Create(&adminUser).Error; err != nil {
 			log.Printf("Failed to create admin user: %v", err)
 			return err
 		}
 		// log.Printf("Admin user '%s' created successfully.", adminUser.Email)
-	} else if result.Error == nil {
+	case result.Error == nil:
 		existingUser.PasswordHash = adminUser.PasswordHash
 		existingUser.Role = "admin"
 		if err := db.Save(&existingUser).Error; err != nil {
@@ -109,7 +111,7 @@ func SetupAdminUser(db *gorm.DB) error {
 			return err
 		}
 		// log.Printf("Admin user '%s' updated successfully.", existingUser.Email)
-	} else {
+	default:
 		// log.Printf("Database error checking for admin user: %v", result.Error)
 		return result.Error
 	}
@@ -118,11 +120,10 @@ func SetupAdminUser(db *gorm.DB) error {
 }
 
 func SetupHandlers(router *gin.Engine, db *gorm.DB) {
-	err := db.AutoMigrate(&models.Blog{}, &models.User{}, &models.PasswordResetToken{}, &models.NewsletterSubscriber{})
-	if err != nil {
-		log.Fatalf("Failed to auto migrate models: %v", err)
-	}
-	// log.Println("Blog & User model auto-migrated successfully.")
+	// Run database migration
+	database.MigrateDB()
+
+	// log.Println("Database models auto-migrated successfully.")
 
 	if err := SetupAdminUser(db); err != nil {
 		log.Fatalf("Failed to setup admin user: %v", err)
@@ -134,10 +135,13 @@ func SetupHandlers(router *gin.Engine, db *gorm.DB) {
 	blogController := controllers.NewBlogController(db)
 	userController := controllers.NewUserController(db)
 	newsletterController := controllers.NewNewsletterController(db)
+	workoutController := controllers.NewWorkoutController(db)
+
 	routes.RegisterHomeRoutes(router, homeController)
 	routes.RegisterHealthRoutes(router, healthController)
 	routes.RegisterPaymentRoutes(router, paymentController)
 	routes.RegisterBlogRoutes(router, blogController)
 	routes.RegisterUserRoutes(router, userController)
 	routes.RegisterNewsletterRoutes(router, newsletterController)
+	routes.RegisterWorkoutRoutes(router, workoutController)
 }

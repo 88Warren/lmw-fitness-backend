@@ -1,4 +1,3 @@
-// controllers/payment_controller.go
 package controllers
 
 import (
@@ -10,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stripe/stripe-go/v82"
@@ -38,16 +38,22 @@ type PaymentController struct {
 	TailoredCoachingPriceID       string
 	BeginnerProgramPriceID        string
 	AdvancedProgramPriceID        string
-	FrontendURL                   string
-	StripeWebhookSecret           string
 
-	BrevoAPIKey                    string
-	BrevoNewsletterListID          int64
-	BrevoBeginnerListID            int64
-	BrevoAdvancedListID            int64
-	BrevoMindsetPackageTemplateID  int64
-	BrevoBeginnerProgramTemplateID int64
-	BrevoAdvancedProgramTemplateID int64
+	FrontendURL         string
+	StripeWebhookSecret string
+	BrevoAPIKey         string
+
+	BrevoNewsletterListID       int64
+	BrevoMindsetListID          int64
+	BrevoBeginnerListID         int64
+	BrevoAdvancedListID         int64
+	BrevoTailoredCoachingListID int64
+
+	BrevoMindsetPackageTemplateID    int64
+	BrevoBeginnerProgramTemplateID   int64
+	BrevoAdvancedProgramTemplateID   int64
+	BrevoTailoredCoachingTemplateID  int64
+	BrevoOrderConfirmationTemplateID int64
 }
 
 func NewPaymentController() *PaymentController {
@@ -97,27 +103,36 @@ func NewPaymentController() *PaymentController {
 	}
 
 	brevoNewsletterListID, _ := ParseInt64Env("BREVO_NEWSLETTER_LIST_ID")
+	brevoMindsetListID, _ := ParseInt64Env("BREVO_MINDSET_LIST_ID")
 	brevoBeginnerListID, _ := ParseInt64Env("BREVO_BEGINNER_LIST_ID")
 	brevoAdvancedListID, _ := ParseInt64Env("BREVO_ADVANCED_LIST_ID")
+	brevoTailoredCoachingListID, _ := ParseInt64Env("BREVO_TAILORED_COACHING_LIST_ID")
+
 	brevoMindsetPackageTemplateID, _ := ParseInt64Env("BREVO_MINDSET_PACKAGE_TEMPLATE_ID")
 	brevoBeginnerProgramTemplateID, _ := ParseInt64Env("BREVO_BEGINNER_PROGRAM_TEMPLATE_ID")
 	brevoAdvancedProgramTemplateID, _ := ParseInt64Env("BREVO_ADVANCED_PROGRAM_TEMPLATE_ID")
+	brevoTailoredCoachingTemplateID, _ := ParseInt64Env("BREVO_TAILORED_COACHING_TEMPLATE_ID")
+	brevoOrderConfirmationTemplateID, _ := ParseInt64Env("BREVO_ORDER_CONFIRMATION_TEMPLATE_ID")
 
 	return &PaymentController{
-		StripeClient:                   sc,
-		UltimateMindsetPackagePriceID:  ultimateMindsetPriceID,
-		TailoredCoachingPriceID:        tailoredCoachingPriceID,
-		BeginnerProgramPriceID:         beginnerPriceID,
-		AdvancedProgramPriceID:         advancedPriceID,
-		FrontendURL:                    frontendURL,
-		StripeWebhookSecret:            stripeWebhookSecret,
-		BrevoAPIKey:                    brevoAPIKey,
-		BrevoNewsletterListID:          brevoNewsletterListID,
-		BrevoBeginnerListID:            brevoBeginnerListID,
-		BrevoAdvancedListID:            brevoAdvancedListID,
-		BrevoMindsetPackageTemplateID:  brevoMindsetPackageTemplateID,
-		BrevoBeginnerProgramTemplateID: brevoBeginnerProgramTemplateID,
-		BrevoAdvancedProgramTemplateID: brevoAdvancedProgramTemplateID,
+		StripeClient:                     sc,
+		UltimateMindsetPackagePriceID:    ultimateMindsetPriceID,
+		TailoredCoachingPriceID:          tailoredCoachingPriceID,
+		BeginnerProgramPriceID:           beginnerPriceID,
+		AdvancedProgramPriceID:           advancedPriceID,
+		FrontendURL:                      frontendURL,
+		StripeWebhookSecret:              stripeWebhookSecret,
+		BrevoAPIKey:                      brevoAPIKey,
+		BrevoNewsletterListID:            brevoNewsletterListID,
+		BrevoMindsetListID:               brevoMindsetListID,
+		BrevoBeginnerListID:              brevoBeginnerListID,
+		BrevoAdvancedListID:              brevoAdvancedListID,
+		BrevoTailoredCoachingListID:      brevoTailoredCoachingListID,
+		BrevoMindsetPackageTemplateID:    brevoMindsetPackageTemplateID,
+		BrevoBeginnerProgramTemplateID:   brevoBeginnerProgramTemplateID,
+		BrevoAdvancedProgramTemplateID:   brevoAdvancedProgramTemplateID,
+		BrevoTailoredCoachingTemplateID:  brevoTailoredCoachingTemplateID,
+		BrevoOrderConfirmationTemplateID: brevoOrderConfirmationTemplateID,
 	}
 }
 
@@ -160,9 +175,22 @@ func (pc *PaymentController) CreateCheckoutSession(ctx *gin.Context) {
 
 	lineItems := []*stripe.CheckoutSessionLineItemParams{}
 
+	productNames := make(map[string]string)
+	productNameForPriceID := map[string]string{
+		pc.UltimateMindsetPackagePriceID: "Ultimate Habit & Mindset Package",
+		pc.TailoredCoachingPriceID:       "Tailored Coaching",
+		pc.BeginnerProgramPriceID:        "Beginner Program",
+		pc.AdvancedProgramPriceID:        "Advanced Program",
+	}
+
 	mindsetPackageProcessedForDiscount := false
 
 	for _, item := range req.Items {
+		if name, ok := productNameForPriceID[item.PriceID]; ok {
+			productNames[item.PriceID] = name
+		} else {
+			productNames[item.PriceID] = fmt.Sprintf("Unknown Product (Price ID: %s)", item.PriceID)
+		}
 		if req.IsDiscountApplied && item.PriceID == pc.UltimateMindsetPackagePriceID && !mindsetPackageProcessedForDiscount {
 			originalMindsetPackagePricePence, err := pc.getPriceUnitAmount(pc.UltimateMindsetPackagePriceID)
 			if err != nil {
@@ -210,11 +238,23 @@ func (pc *PaymentController) CreateCheckoutSession(ctx *gin.Context) {
 		}
 	}
 
+	metadata := make(map[string]string)
+	var orderedProductNames []string
+	for _, item := range req.Items {
+		if name, ok := productNameForPriceID[item.PriceID]; ok {
+			orderedProductNames = append(orderedProductNames, name)
+		}
+	}
+	if len(orderedProductNames) > 0 {
+		metadata["purchased_products"] = fmt.Sprintf("%v", orderedProductNames)
+	}
+
 	params := &stripe.CheckoutSessionParams{
 		LineItems:  lineItems,
 		Mode:       stripe.String(mode),
 		SuccessURL: stripe.String(pc.FrontendURL + "/payment-success?session_id={CHECKOUT_SESSION_ID}"),
 		CancelURL:  stripe.String(pc.FrontendURL + "/payment-cancelled"),
+		Metadata:   metadata,
 	}
 
 	if req.CustomerEmail != "" {
@@ -240,10 +280,7 @@ func (pc *PaymentController) CreateCheckoutSession(ctx *gin.Context) {
 
 func (pc *PaymentController) AddContactToBrevo(email string, listIDs []int64) error {
 	log.Printf("Attempting to add contact %s to Brevo lists %v", email, listIDs)
-	// This is a placeholder. You'll need to use a Brevo SDK or make an HTTP POST request
-	// to Brevo's "Add or Update a Contact" endpoint (https://developers.brevo.com/reference/createcontact).
-	// The lists parameter should be the IDs of the lists you want to add the contact to.
-	// Example using pseudo-code for HTTP request:
+
 	brevoURL := "https://api.brevo.com/v3/contacts"
 	payload := map[string]interface{}{
 		"email":            email,
@@ -252,7 +289,10 @@ func (pc *PaymentController) AddContactToBrevo(email string, listIDs []int64) er
 		"smsBlacklisted":   false,
 		"attributes":       map[string]string{},
 	}
-	jsonPayload, _ := json.Marshal(payload)
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("error marshalling Brevo payload: %w", err)
+	}
 
 	req, err := http.NewRequest("POST", brevoURL, bytes.NewBuffer(jsonPayload))
 	if err != nil {
@@ -268,19 +308,71 @@ func (pc *PaymentController) AddContactToBrevo(email string, listIDs []int64) er
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("failed to add contact to Brevo, status: %d, response: %s", resp.StatusCode, string(bodyBytes))
+	if resp.StatusCode == http.StatusCreated || resp.StatusCode == http.StatusNoContent {
+		log.Printf("Successfully added/updated contact %s in Brevo (via POST, status %d)", email, resp.StatusCode)
+		return nil
 	}
 
-	log.Printf("Successfully added/updated contact %s in Brevo", email)
-	return nil
+	bodyBytes, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		return fmt.Errorf("failed to read Brevo response body, status: %d, original error: %w", resp.StatusCode, err)
+	}
+
+	var brevoError struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	}
+
+	json.Unmarshal(bodyBytes, &brevoError)
+
+	if resp.StatusCode == http.StatusBadRequest && brevoError.Code == "duplicate_parameter" && brevoError.Message == "Unable to create contact, email is already associated with another Contact" {
+		log.Printf("Contact %s already exists in Brevo. Attempting to update list memberships via PUT.", email)
+
+		updateURL := fmt.Sprintf("https://api.brevo.com/v3/contacts/%s", email)
+		existingListIDs, getErr := pc.GetContactBrevo(email)
+		if getErr != nil {
+			log.Printf("Could not retrieve current list memberships for %s: %v", email, getErr)
+		}
+
+		finalListIDs := mergeUniqueInt64(existingListIDs, listIDs)
+		updatePayload := map[string]interface{}{
+			"listIds": finalListIDs,
+		}
+
+		jsonUpdatePayload, err := json.Marshal(updatePayload)
+		if err != nil {
+			return fmt.Errorf("error marshalling Brevo update payload for PUT: %w", err)
+		}
+
+		log.Printf("PUT Payload for %s: %s", email, string(jsonUpdatePayload))
+
+		updateReq, err := http.NewRequest("PUT", updateURL, bytes.NewBuffer(jsonUpdatePayload))
+		if err != nil {
+			return fmt.Errorf("error creating Brevo PUT request: %w", err)
+		}
+		updateReq.Header.Set("Content-Type", "application/json")
+		updateReq.Header.Set("api-key", pc.BrevoAPIKey)
+
+		updateResp, err := client.Do(updateReq)
+		if err != nil {
+			return fmt.Errorf("error sending Brevo PUT request: %w", err)
+		}
+		defer updateResp.Body.Close()
+
+		if updateResp.StatusCode == http.StatusNoContent {
+			log.Printf("Successfully updated contact %s list memberships in Brevo (via PUT, status %d).", email, updateResp.StatusCode)
+			return nil
+		}
+
+		updateBodyBytes, _ := io.ReadAll(updateResp.Body)
+		return fmt.Errorf("failed to update contact lists in Brevo, status: %d, response: %s", updateResp.StatusCode, string(updateBodyBytes))
+	}
+
+	return fmt.Errorf("failed to add contact to Brevo, status: %d, response: %s", resp.StatusCode, string(bodyBytes))
 }
 
 func (pc *PaymentController) SendBrevoTransactionalEmail(email string, templateID int64, params map[string]interface{}) error {
 	log.Printf("Attempting to send transactional email to %s using template %d", email, templateID)
-	// Placeholder. You'll use Brevo's "Send a transactional email" endpoint (https://developers.brevo.com/reference/sendtransacemail).
-	// The templateId and to parameters are crucial. params can be used for dynamic content.
 
 	brevoURL := "https://api.brevo.com/v3/smtp/email"
 	payload := map[string]interface{}{
@@ -288,7 +380,10 @@ func (pc *PaymentController) SendBrevoTransactionalEmail(email string, templateI
 		"templateId": templateID,
 		"params":     params,
 	}
-	jsonPayload, _ := json.Marshal(payload)
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("error marshalling Brevo email payload: %w", err)
+	}
 
 	req, err := http.NewRequest("POST", brevoURL, bytes.NewBuffer(jsonPayload))
 	if err != nil {
@@ -322,8 +417,6 @@ func (pc *PaymentController) StripeWebhook(ctx *gin.Context) {
 		return
 	}
 
-	// IMPORTANT: Verify the webhook signature
-	// You get this secret from your Stripe Dashboard -> Developers -> Webhooks -> Select your endpoint -> Click to reveal secret
 	endpointSecret := pc.StripeWebhookSecret
 	event, err := webhook.ConstructEvent(payload, ctx.Request.Header.Get("Stripe-Signature"), endpointSecret)
 	if err != nil {
@@ -351,85 +444,129 @@ func (pc *PaymentController) StripeWebhook(ctx *gin.Context) {
 
 		log.Printf("Checkout session %s completed for email: %s", checkoutSession.ID, customerEmail)
 
-		// 1. Add to Newsletter (Default)
-		listIDsToAdd := []int64{pc.BrevoNewsletterListID}
-		if pc.BrevoNewsletterListID == 0 {
-			log.Printf("Warning: Brevo Newsletter List ID not configured. Skipping newsletter subscription.")
-			listIDsToAdd = []int64{}
+		if checkoutSession.PaymentStatus != stripe.CheckoutSessionPaymentStatusPaid {
+			log.Printf("Checkout session %s not paid. Skipping Brevo actions.", checkoutSession.ID)
+			ctx.JSON(http.StatusOK, gin.H{"received": true, "message": "Payment not successful"})
+			return
 		}
 
-		// 2. Check purchased items for specific programs and mindset package
+		lineItemParams := &stripe.CheckoutSessionListLineItemsParams{
+			Session: stripe.String(checkoutSession.ID),
+		}
+		lineItemParams.Expand = []*string{stripe.String("data.price.product")}
+		lineItemIterator := pc.StripeClient.CheckoutSessions.ListLineItems(lineItemParams)
 
-		lineItemIterator := pc.StripeClient.CheckoutSessions.ListLineItems(&stripe.CheckoutSessionListLineItemsParams{})
-		purchasedProductIDs := []string{}
+		purchasedPriceIDs := []string{}
+		purchasedProductNames := []string{}
 		for lineItemIterator.Next() {
 			li := lineItemIterator.LineItem()
 			if li.Price != nil {
-				purchasedProductIDs = append(purchasedProductIDs, li.Price.ID)
+				purchasedPriceIDs = append(purchasedPriceIDs, li.Price.ID)
+				if li.Price.Product != nil && li.Price.Product.Name != "" {
+					purchasedProductNames = append(purchasedProductNames, li.Price.Product.Name)
+				} else if li.Description != "" {
+					purchasedProductNames = append(purchasedProductNames, li.Description)
+				}
 			}
 		}
-		log.Printf("Purchased product price IDs: %v", purchasedProductIDs)
+		log.Printf("Purchased product price IDs: %v", purchasedPriceIDs)
+		log.Printf("Purchased product names: %v", purchasedProductNames)
 
-		hasMindsetPackage := false
-		hasBeginnerProgram := false
-		hasAdvancedProgram := false
+		listIDsToAdd := []int64{}
+		emailTemplatesToSend := make(map[int64]bool)
 
-		for _, priceID := range purchasedProductIDs {
-			if priceID == pc.UltimateMindsetPackagePriceID {
-				hasMindsetPackage = true
+		if pc.BrevoNewsletterListID != 0 {
+			listIDsToAdd = append(listIDsToAdd, pc.BrevoNewsletterListID)
+		} else {
+			log.Println("Warning: Brevo Newsletter List ID not configured. Skipping newsletter subscription.")
+		}
+
+		for i, priceID := range purchasedPriceIDs {
+			productName := purchasedProductNames[i]
+
+			if priceID == pc.UltimateMindsetPackagePriceID || strings.Contains(strings.ToLower(productName), "mindset") {
+				if pc.BrevoMindsetListID != 0 {
+					listIDsToAdd = append(listIDsToAdd, pc.BrevoMindsetListID)
+				} else {
+					log.Println("Warning: Brevo Mindset Package List ID not configured.")
+				}
+				if pc.BrevoMindsetPackageTemplateID != 0 {
+					emailTemplatesToSend[pc.BrevoMindsetPackageTemplateID] = true
+				} else {
+					log.Println("Warning: Brevo Mindset Package Template ID not configured.")
+				}
 			}
-			if priceID == pc.BeginnerProgramPriceID {
-				hasBeginnerProgram = true
+
+			switch priceID {
+			case pc.BeginnerProgramPriceID:
+				if pc.BrevoBeginnerListID != 0 {
+					listIDsToAdd = append(listIDsToAdd, pc.BrevoBeginnerListID)
+				}
+				if pc.BrevoBeginnerProgramTemplateID != 0 {
+					emailTemplatesToSend[pc.BrevoBeginnerProgramTemplateID] = true
+				}
+			case pc.AdvancedProgramPriceID:
+				if pc.BrevoAdvancedListID != 0 {
+					listIDsToAdd = append(listIDsToAdd, pc.BrevoAdvancedListID)
+				}
+				if pc.BrevoAdvancedProgramTemplateID != 0 {
+					emailTemplatesToSend[pc.BrevoAdvancedProgramTemplateID] = true
+				}
+			case pc.TailoredCoachingPriceID:
+				if pc.BrevoTailoredCoachingListID != 0 {
+					listIDsToAdd = append(listIDsToAdd, pc.BrevoTailoredCoachingListID)
+				}
+				if pc.BrevoTailoredCoachingTemplateID != 0 {
+					emailTemplatesToSend[pc.BrevoTailoredCoachingTemplateID] = true
+				}
 			}
-			if priceID == pc.AdvancedProgramPriceID {
-				hasAdvancedProgram = true
-			}
 		}
 
-		if hasBeginnerProgram && pc.BrevoBeginnerListID != 0 {
-			listIDsToAdd = append(listIDsToAdd, pc.BrevoBeginnerListID)
-		}
-		if hasAdvancedProgram && pc.BrevoAdvancedListID != 0 {
-			listIDsToAdd = append(listIDsToAdd, pc.BrevoAdvancedListID)
-		}
-
-		err = pc.AddContactToBrevo(customerEmail, listIDsToAdd)
-		if err != nil {
-			log.Printf("Error adding contact %s to Brevo: %v", customerEmail, err)
-			// Decide how to handle this: log, retry, send alert. Don't block Stripe.
-		}
-
-		// Send Mindset Package attachments
-		if hasMindsetPackage && pc.BrevoMindsetPackageTemplateID != 0 {
-			err = pc.SendBrevoTransactionalEmail(customerEmail, pc.BrevoMindsetPackageTemplateID, map[string]interface{}{
-				"CUSTOMER_NAME": "Valued Customer", // Customize with actual customer name if you capture it
-				// Add any other params your Brevo template expects, e.g., download links
-				// "DOWNLOAD_LINK_WORKSHEET": "https://yourdomain.com/downloads/worksheet.pdf",
-				// "DOWNLOAD_LINK_GUIDE": "https://yourdomain.com/downloads/guide.pdf",
-			})
+		if len(listIDsToAdd) > 0 {
+			err = pc.AddContactToBrevo(customerEmail, listIDsToAdd)
 			if err != nil {
-				log.Printf("Error sending mindset package email to %s: %v", customerEmail, err)
+				log.Printf("Error adding contact %s to Brevo lists %v: %v", customerEmail, listIDsToAdd, err)
+			} else {
+				currentListsViaAPI, getErr := pc.GetContactBrevo(customerEmail)
+				if getErr != nil {
+					log.Printf("DIAGNOSTIC ERROR: Failed to get contact %s details from Brevo after update attempt: %v", customerEmail, getErr)
+				} else {
+					log.Printf("DIAGNOSTIC SUCCESS: Brevo API reports contact %s is now in lists: %v (After successful PUT/POST operation)", customerEmail, currentListsViaAPI)
+				}
+			}
+		} else {
+			log.Println("No Brevo lists identified for this purchase.")
+		}
+
+		for templateID := range emailTemplatesToSend {
+			emailParams := map[string]interface{}{
+				"CUSTOMER_EMAIL":  customerEmail,
+				"PURCHASED_ITEMS": purchasedProductNames,
+			}
+			err = pc.SendBrevoTransactionalEmail(customerEmail, templateID, emailParams)
+			if err != nil {
+				log.Printf("Error sending transactional email (Template ID: %d) to %s: %v", templateID, customerEmail, err)
 			}
 		}
 
-		// Optional: Send program-specific welcome emails if not handled by automation workflows
-		if hasBeginnerProgram && pc.BrevoBeginnerProgramTemplateID != 0 {
-			err = pc.SendBrevoTransactionalEmail(customerEmail, pc.BrevoBeginnerProgramTemplateID, map[string]interface{}{})
-			if err != nil {
-				log.Printf("Error sending beginner program email to %s: %v", customerEmail, err)
+		if pc.BrevoOrderConfirmationTemplateID != 0 {
+			orderConfirmationParams := map[string]interface{}{
+				"ORDER_ID":       checkoutSession.ID,
+				"CUSTOMER_EMAIL": customerEmail,
+				"TOTAL_AMOUNT":   fmt.Sprintf("%.2f", float64(checkoutSession.AmountTotal)/100.0),
+				"CURRENCY":       checkoutSession.Currency,
+				"PRODUCT_NAMES":  purchasedProductNames,
+				"PURCHASE_DATE":  stripe.String(fmt.Sprintf("%d", checkoutSession.Created)),
 			}
-		}
-		if hasAdvancedProgram && pc.BrevoAdvancedProgramTemplateID != 0 {
-			err = pc.SendBrevoTransactionalEmail(customerEmail, pc.BrevoAdvancedProgramTemplateID, map[string]interface{}{})
+			err = pc.SendBrevoTransactionalEmail(customerEmail, pc.BrevoOrderConfirmationTemplateID, orderConfirmationParams)
 			if err != nil {
-				log.Printf("Error sending advanced program email to %s: %v", customerEmail, err)
+				log.Printf("Error sending general order confirmation email to %s: %v", customerEmail, err)
 			}
+		} else {
+			log.Println("Warning: Brevo Order Confirmation Template ID not configured. Skipping general order confirmation email.")
 		}
 
 	case "invoice.payment_succeeded":
-		// This event is important for subscriptions.
-		// You might want to update user records, grant access, etc.
-		// For tailored coaching, this confirms a recurring payment.
 		var invoice stripe.Invoice
 		err := json.Unmarshal(event.Data.Raw, &invoice)
 		if err != nil {
@@ -437,7 +574,20 @@ func (pc *PaymentController) StripeWebhook(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event data"})
 			return
 		}
-		log.Printf("Invoice payment succeeded for invoice %s. Customer email: %s", invoice.ID, invoice.CustomerEmail)
+
+		customerEmail := invoice.CustomerEmail
+		if customerEmail == "" && invoice.Customer != nil {
+			customer, custErr := pc.StripeClient.Customers.Get(invoice.Customer.ID, nil)
+			if custErr == nil && customer != nil {
+				customerEmail = customer.Email
+			}
+		}
+
+		if customerEmail != "" {
+			log.Printf("Invoice payment succeeded for invoice %s. Customer email: %s", invoice.ID, customerEmail)
+		} else {
+			log.Printf("Invoice payment succeeded for invoice %s, but customer email could not be determined.", invoice.ID)
+		}
 
 	default:
 		log.Printf("Unhandled event type: %s", event.Type)
@@ -452,4 +602,58 @@ func (pc *PaymentController) getPriceUnitAmount(priceID string) (int64, error) {
 		return 0, err
 	}
 	return price.UnitAmount, nil
+}
+
+func (pc *PaymentController) GetContactBrevo(email string) ([]int64, error) {
+	log.Printf("Attempting to get contact %s details from Brevo", email)
+
+	brevoURL := fmt.Sprintf("https://api.brevo.com/v3/contacts/%s", email)
+
+	req, err := http.NewRequest("GET", brevoURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating Brevo GET request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("api-key", pc.BrevoAPIKey)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error sending Brevo GET request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		return nil, fmt.Errorf("failed to read Brevo GET response body, status: %d, error: %w", resp.StatusCode, readErr)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get contact from Brevo, status: %d, response: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var brevoContact struct {
+		ListIds []int64 `json:"listIds"`
+	}
+	if err := json.Unmarshal(bodyBytes, &brevoContact); err != nil {
+		return nil, fmt.Errorf("error unmarshalling Brevo contact details: %w", err)
+	}
+
+	log.Printf("Successfully retrieved contact %s from Brevo via GET. Current lists reported by API: %v", email, brevoContact.ListIds)
+	return brevoContact.ListIds, nil
+}
+
+func mergeUniqueInt64(existing, additions []int64) []int64 {
+	m := map[int64]bool{}
+	for _, id := range existing {
+		m[id] = true
+	}
+	for _, id := range additions {
+		m[id] = true
+	}
+	merged := []int64{}
+	for id := range m {
+		merged = append(merged, id)
+	}
+	return merged
 }

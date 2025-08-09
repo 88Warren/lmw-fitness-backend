@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/88warren/lmw-fitness-backend/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -13,7 +14,7 @@ import (
 var DB *gorm.DB
 
 func ConnectToDB() {
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
+	dns := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
 		os.Getenv("DB_HOST"),
 		os.Getenv("DB_USER"),
 		os.Getenv("DB_PASSWORD"),
@@ -27,7 +28,7 @@ func ConnectToDB() {
 	var err error
 	maxRetries := 5
 	for i := 0; i < maxRetries; i++ {
-		DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		DB, err = gorm.Open(postgres.Open(dns), &gorm.Config{})
 		if err == nil {
 			// log.Println("Database connection established")
 			return
@@ -43,4 +44,26 @@ func ConnectToDB() {
 
 func GetDB() *gorm.DB {
 	return DB
+}
+
+// MigrateDB creates all database tables
+func MigrateDB() {
+	log.Println("Starting database migration...")
+
+	err := DB.AutoMigrate(
+		&models.User{},
+		&models.PasswordResetToken{},
+		&models.WorkoutProgram{},
+		&models.WorkoutDay{},
+		&models.WorkoutBlock{},
+		&models.Exercise{},
+		&models.WorkoutExercise{},
+		&models.UserWorkoutSession{},
+	)
+
+	if err != nil {
+		log.Fatalf("Failed to migrate database: %v", err)
+	}
+
+	log.Println("Database migration completed successfully")
 }

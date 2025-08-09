@@ -1,6 +1,8 @@
 package models
 
 import (
+	"time"
+
 	"gorm.io/gorm"
 )
 
@@ -10,6 +12,14 @@ type User struct {
 	PasswordHash        string               `gorm:"not null" json:"-"`
 	Role                string               `gorm:"not null;default:'user'" json:"role"`
 	PasswordResetTokens []PasswordResetToken `gorm:"foreignKey:UserID"`
+	MustChangePassword  bool                 `gorm:"default:true"`
+}
+
+type UserResponse struct {
+	ID                 uint   `json:"id"`
+	Email              string `json:"email"`
+	Role               string `json:"role"`
+	MustChangePassword bool   `json:"mustChangePassword"`
 }
 
 type LoginRequest struct {
@@ -22,8 +32,10 @@ type RegisterRequest struct {
 	Password string `json:"password" binding:"required,min=8"`
 }
 
-type UserResponse struct {
-	ID    uint   `json:"id"`
-	Email string `json:"email"`
-	Role  string `json:"role"`
+type PasswordResetToken struct {
+	gorm.Model
+	UserID    uint      `gorm:"not null"`
+	Token     string    `gorm:"unique;not null"`
+	ExpiresAt time.Time `gorm:"not null"`
+	User      User      `gorm:"foreignKey:UserID"`
 }

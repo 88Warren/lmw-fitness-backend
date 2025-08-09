@@ -67,9 +67,10 @@ func (uc *UserController) RegisterUser(ctx *gin.Context) {
 
 	// Create new user
 	user := models.User{
-		Email:        req.Email,
-		PasswordHash: string(hashedPassword),
-		Role:         "user",
+		Email:              req.Email,
+		PasswordHash:       string(hashedPassword),
+		Role:               "user",
+		MustChangePassword: true,
 	}
 
 	if result := uc.DB.Create(&user); result.Error != nil {
@@ -88,9 +89,10 @@ func (uc *UserController) RegisterUser(ctx *gin.Context) {
 		"message": "User registered successfully",
 		"token":   token,
 		"user": models.UserResponse{
-			ID:    user.ID,
-			Email: user.Email,
-			Role:  user.Role,
+			ID:                 user.ID,
+			Email:              user.Email,
+			Role:               user.Role,
+			MustChangePassword: user.MustChangePassword,
 		},
 	})
 }
@@ -133,9 +135,10 @@ func (uc *UserController) LoginUser(ctx *gin.Context) {
 		"message": "Login successful",
 		"token":   token,
 		"user": models.UserResponse{
-			ID:    user.ID,
-			Email: user.Email,
-			Role:  user.Role,
+			ID:                 user.ID,
+			Email:              user.Email,
+			Role:               user.Role,
+			MustChangePassword: user.MustChangePassword,
 		},
 	})
 }
@@ -159,10 +162,92 @@ func (uc *UserController) GetProfile(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, models.UserResponse{
-		ID:    user.ID,
-		Email: user.Email,
-		Role:  user.Role,
+		ID:                 user.ID,
+		Email:              user.Email,
+		Role:               user.Role,
+		MustChangePassword: user.MustChangePassword,
 	})
+}
+
+type ChangePasswordRequest struct {
+	OldPassword        string `json:"oldPassword" binding:"required"`
+	NewPassword        string `json:"newPassword" binding:"required"`
+	ConfirmNewPassword string `json:"confirmNewPassword" binding:"required"` // For frontend validation
+}
+
+func (uc *UserController) ChangePassword(ctx *gin.Context) {
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	var req ChangePasswordRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 1. Validate new password complexity
+	if err := ValidatePassword(req.NewPassword); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 2. Check if new password matches confirmation
+	if req.NewPassword != req.ConfirmNewPassword {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "New password and confirmation do not match."})
+		return
+	}
+
+	// 3. Find the user
+	var user models.User
+	if result := uc.DB.First(&user, userID); result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found."})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Database error finding user."})
+		return
+	}
+
+	// 4. Verify old password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.OldPassword)); err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Incorrect old password."})
+		return
+	}
+
+	// 5. Prevent using the same password as the old one (if it was a different hash)
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.NewPassword)); err == nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "New password cannot be the same as your old password."})
+		return
+	} else if err != bcrypt.ErrMismatchedHashAndPassword {
+		// This means bcrypt.CompareHashAndPassword returned an error other than mismatch, which is unexpected
+		log.Printf("Bcrypt comparison error during password change: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred during password validation."})
+		return
+	}
+
+	// 6. Hash the new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash new password."})
+		return
+	}
+
+	// 7. Update user's password and set MustChangePassword to false
+	user.PasswordHash = string(hashedPassword)
+	user.MustChangePassword = false // Password has been successfully changed
+
+	log.Printf("User %d mustChangePassword updated to: %v", user.ID, user.MustChangePassword)
+
+	if result := uc.DB.Save(&user); result.Error != nil {
+		log.Printf("Error updating user password: %v", result.Error)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password."})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Password changed successfully!"})
 }
 
 func GenerateJWT(userID uint, email, role string) (string, error) {
