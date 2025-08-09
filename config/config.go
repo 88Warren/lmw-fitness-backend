@@ -122,7 +122,7 @@ func SetupAdminUser(db *gorm.DB) error {
 func SetupHandlers(router *gin.Engine, db *gorm.DB) {
 	// Run database migration
 	database.MigrateDB()
-
+	database.SeedDB(db)
 	// log.Println("Database models auto-migrated successfully.")
 
 	if err := SetupAdminUser(db); err != nil {

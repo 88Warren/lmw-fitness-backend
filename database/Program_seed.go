@@ -27,17 +27,16 @@ func ProgramSeed() {
 		},
 	}
 
-	for _, program := range programmes {
+	for _, p := range programmes {
 		var existingProgram models.WorkoutProgram
-		if err := DB.Where("name = ?", program.Name).First(&existingProgram).Error; err != nil {
-			if err := DB.Create(&program).Error; err != nil {
-				log.Printf("Failed to create program %s: %v", program.Name, err)
-				continue
-			}
-			log.Printf("Created program: %s", program.Name)
+		if err := DB.Where("name = ?", p.Name).First(&existingProgram).Error; err == nil {
+			log.Printf("Program '%s' (%s) already exists", existingProgram.Name, existingProgram.Difficulty)
+			continue
+		}
+		if err := DB.Create(&p).Error; err != nil {
+			log.Printf("Failed to create program '%s' (%s): %v", p.Name, p.Difficulty, err)
 		} else {
-			program = existingProgram
-			log.Printf("Program already exists: %s", program.Name)
+			log.Printf("Successfully created program '%s' (%s).", p.Name, p.Difficulty)
 		}
 	}
 }
