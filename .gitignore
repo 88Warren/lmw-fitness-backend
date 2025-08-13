@@ -8,3 +8,4 @@ dist-ssr
 
 helm_chart/templates/secrets.yaml
 .env.*
+*.log
