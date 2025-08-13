@@ -6,15 +6,20 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/88warren/lmw-fitness-backend/models"
 	"github.com/gin-gonic/gin"
 	"github.com/stripe/stripe-go/v82"
 	"github.com/stripe/stripe-go/v82/client"
 	"github.com/stripe/stripe-go/v82/webhook"
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 const (
@@ -54,9 +59,11 @@ type PaymentController struct {
 	BrevoAdvancedProgramTemplateID   int64
 	BrevoTailoredCoachingTemplateID  int64
 	BrevoOrderConfirmationTemplateID int64
+
+	DB *gorm.DB
 }
 
-func NewPaymentController() *PaymentController {
+func NewPaymentController(db *gorm.DB) *PaymentController {
 	stripeSecretKey := getEnvVar("STRIPE_SECRET_KEY")
 	if stripeSecretKey == "" {
 		log.Fatalf("FATAL: STRIPE_SECRET_KEY environment variable not set.")
@@ -133,7 +140,19 @@ func NewPaymentController() *PaymentController {
 		BrevoAdvancedProgramTemplateID:   brevoAdvancedProgramTemplateID,
 		BrevoTailoredCoachingTemplateID:  brevoTailoredCoachingTemplateID,
 		BrevoOrderConfirmationTemplateID: brevoOrderConfirmationTemplateID,
+		DB:                               db,
 	}
+}
+
+// generateRandomPassword generates a secure, random password.
+func GenerateRandomPassword() (string, error) {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+"
+	var seededRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+	b := make([]byte, 16)
+	for i := range b {
+		b[i] = charset[seededRand.Intn(len(charset))]
+	}
+	return string(b), nil
 }
 
 func getEnvVar(key string) string {
@@ -155,6 +174,62 @@ func ParseInt64Env(key string) (int64, error) {
 		return 0, err
 	}
 	return val, nil
+}
+
+func (pc *PaymentController) FindOrCreateUser(email string) (uint, error) {
+	var user models.User
+
+	// Attempt to find the user. If not found, a new user struct will be initialized.
+	tx := pc.DB.Where(models.User{Email: email}).FirstOrCreate(&user)
+	if tx.Error != nil {
+		return 0, fmt.Errorf("could not find or create user: %w", tx.Error)
+	}
+
+	// If the user was just created, generate a password and save it.
+	if tx.RowsAffected > 0 {
+		randomPassword, err := GenerateRandomPassword()
+		if err != nil {
+			return 0, fmt.Errorf("could not generate temporary password: %w", err)
+		}
+
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(randomPassword), bcrypt.DefaultCost)
+		if err != nil {
+			return 0, fmt.Errorf("could not hash temporary password: %w", err)
+		}
+
+		user.PasswordHash = string(hashedPassword)
+		user.MustChangePassword = true
+
+		if err := pc.DB.Save(&user).Error; err != nil {
+			return 0, fmt.Errorf("could not save new user password: %w", err)
+		}
+	}
+
+	return user.ID, nil
+}
+
+func (pc *PaymentController) CreateAuthToken(userID uint, programName string, dayNumber int) (string, error) {
+	token := GenerateRandomToken()
+
+	authToken := models.AuthToken{
+		UserID:      userID,
+		Token:       token,
+		ProgramName: programName,
+		DayNumber:   dayNumber,
+		IsUsed:      false,
+	}
+
+	if err := pc.DB.Create(&authToken).Error; err != nil {
+		return "", fmt.Errorf("could not save auth token: %w", err)
+	}
+
+	return token, nil
+}
+
+func GenerateRandomToken() string {
+	b := make([]byte, 32) // 32 characters for a robust token
+	rand.Read(b)
+	return fmt.Sprintf("%x", b)
 }
 
 func (pc *PaymentController) CreateCheckoutSession(ctx *gin.Context) {
@@ -192,7 +267,7 @@ func (pc *PaymentController) CreateCheckoutSession(ctx *gin.Context) {
 			productNames[item.PriceID] = fmt.Sprintf("Unknown Product (Price ID: %s)", item.PriceID)
 		}
 		if req.IsDiscountApplied && item.PriceID == pc.UltimateMindsetPackagePriceID && !mindsetPackageProcessedForDiscount {
-			originalMindsetPackagePricePence, err := pc.getPriceUnitAmount(pc.UltimateMindsetPackagePriceID)
+			originalMindsetPackagePricePence, err := pc.GetPriceUnitAmount(pc.UltimateMindsetPackagePriceID)
 			if err != nil {
 				log.Printf("Error fetching original price for mindset package: %v", err)
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Could not retrieve product price."})
@@ -264,9 +339,13 @@ func (pc *PaymentController) CreateCheckoutSession(ctx *gin.Context) {
 		log.Println("No customer email provided for checkout session.")
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Customer email is required"})
 	}
-
 	log.Printf("Creating checkout session with params: %+v", params)
-	log.Printf("Creating checkout session with params: %+v, CustomerEmail value: %s", params, *params.CustomerEmail)
+
+	customerEmail := "not provided"
+	if params.CustomerEmail != nil {
+		customerEmail = *params.CustomerEmail
+	}
+	log.Printf("Creating checkout session with params: %+v, CustomerEmail value: %s", params, customerEmail)
 
 	s, err := pc.StripeClient.CheckoutSessions.New(params)
 	if err != nil {
@@ -409,6 +488,11 @@ func (pc *PaymentController) SendBrevoTransactionalEmail(email string, templateI
 }
 
 func (pc *PaymentController) StripeWebhook(ctx *gin.Context) {
+	log.Printf("=== WEBHOOK RECEIVED ===")
+	log.Printf("Headers: %v", ctx.Request.Header)
+	log.Printf("Method: %s", ctx.Request.Method)
+	log.Printf("URL: %s", ctx.Request.URL.String())
+
 	const MaxBodyBytes = int64(65536)
 	payload, err := io.ReadAll(io.LimitReader(ctx.Request.Body, MaxBodyBytes))
 	if err != nil {
@@ -417,7 +501,12 @@ func (pc *PaymentController) StripeWebhook(ctx *gin.Context) {
 		return
 	}
 
+	log.Printf("Webhook payload received, length: %d bytes", len(payload))
+	log.Printf("Payload preview: %s", string(payload[:min(len(payload), 200)]))
+
 	endpointSecret := pc.StripeWebhookSecret
+	log.Printf("Webhook secret configured: %v", len(endpointSecret) > 0)
+
 	event, err := webhook.ConstructEvent(payload, ctx.Request.Header.Get("Stripe-Signature"), endpointSecret)
 	if err != nil {
 		log.Printf("Error verifying webhook signature: %v", err)
@@ -425,8 +514,13 @@ func (pc *PaymentController) StripeWebhook(ctx *gin.Context) {
 		return
 	}
 
+	log.Printf("Webhook signature verified successfully")
+	log.Printf("Received webhook event of type: %s", event.Type)
+	log.Printf("Event ID: %s", event.ID)
+
 	switch event.Type {
 	case "checkout.session.completed":
+		log.Println("=== Processing 'checkout.session.completed' event ===")
 		var checkoutSession stripe.CheckoutSession
 		err := json.Unmarshal(event.Data.Raw, &checkoutSession)
 		if err != nil {
@@ -434,6 +528,11 @@ func (pc *PaymentController) StripeWebhook(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event data"})
 			return
 		}
+
+		log.Printf("Checkout session details:")
+		log.Printf("  - Session ID: %s", checkoutSession.ID)
+		log.Printf("  - Payment Status: %s", checkoutSession.PaymentStatus)
+		log.Printf("  - Customer Email: %s", checkoutSession.CustomerDetails.Email)
 
 		customerEmail := checkoutSession.CustomerDetails.Email
 		if customerEmail == "" {
@@ -444,159 +543,344 @@ func (pc *PaymentController) StripeWebhook(ctx *gin.Context) {
 
 		log.Printf("Checkout session %s completed for email: %s", checkoutSession.ID, customerEmail)
 
-		if checkoutSession.PaymentStatus != stripe.CheckoutSessionPaymentStatusPaid {
-			log.Printf("Checkout session %s not paid. Skipping Brevo actions.", checkoutSession.ID)
-			ctx.JSON(http.StatusOK, gin.H{"received": true, "message": "Payment not successful"})
+		job := models.Job{
+			SessionID:     checkoutSession.ID,
+			CustomerEmail: customerEmail,
+			Status:        "pending",
+			Attempts:      0,
+		}
+
+		log.Printf("Creating job in database: %+v", job)
+		if result := pc.DB.Create(&job); result.Error != nil {
+			log.Printf("Failed to create job for session %s: %v", checkoutSession.ID, result.Error)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create job"})
 			return
 		}
 
-		lineItemParams := &stripe.CheckoutSessionListLineItemsParams{
-			Session: stripe.String(checkoutSession.ID),
-		}
-		lineItemParams.Expand = []*string{stripe.String("data.price.product")}
-		lineItemIterator := pc.StripeClient.CheckoutSessions.ListLineItems(lineItemParams)
-
-		purchasedPriceIDs := []string{}
-		purchasedProductNames := []string{}
-		for lineItemIterator.Next() {
-			li := lineItemIterator.LineItem()
-			if li.Price != nil {
-				purchasedPriceIDs = append(purchasedPriceIDs, li.Price.ID)
-				if li.Price.Product != nil && li.Price.Product.Name != "" {
-					purchasedProductNames = append(purchasedProductNames, li.Price.Product.Name)
-				} else if li.Description != "" {
-					purchasedProductNames = append(purchasedProductNames, li.Description)
-				}
-			}
-		}
-		log.Printf("Purchased product price IDs: %v", purchasedPriceIDs)
-		log.Printf("Purchased product names: %v", purchasedProductNames)
-
-		listIDsToAdd := []int64{}
-		emailTemplatesToSend := make(map[int64]bool)
-
-		if pc.BrevoNewsletterListID != 0 {
-			listIDsToAdd = append(listIDsToAdd, pc.BrevoNewsletterListID)
-		} else {
-			log.Println("Warning: Brevo Newsletter List ID not configured. Skipping newsletter subscription.")
-		}
-
-		for i, priceID := range purchasedPriceIDs {
-			productName := purchasedProductNames[i]
-
-			if priceID == pc.UltimateMindsetPackagePriceID || strings.Contains(strings.ToLower(productName), "mindset") {
-				if pc.BrevoMindsetListID != 0 {
-					listIDsToAdd = append(listIDsToAdd, pc.BrevoMindsetListID)
-				} else {
-					log.Println("Warning: Brevo Mindset Package List ID not configured.")
-				}
-				if pc.BrevoMindsetPackageTemplateID != 0 {
-					emailTemplatesToSend[pc.BrevoMindsetPackageTemplateID] = true
-				} else {
-					log.Println("Warning: Brevo Mindset Package Template ID not configured.")
-				}
-			}
-
-			switch priceID {
-			case pc.BeginnerProgramPriceID:
-				if pc.BrevoBeginnerListID != 0 {
-					listIDsToAdd = append(listIDsToAdd, pc.BrevoBeginnerListID)
-				}
-				if pc.BrevoBeginnerProgramTemplateID != 0 {
-					emailTemplatesToSend[pc.BrevoBeginnerProgramTemplateID] = true
-				}
-			case pc.AdvancedProgramPriceID:
-				if pc.BrevoAdvancedListID != 0 {
-					listIDsToAdd = append(listIDsToAdd, pc.BrevoAdvancedListID)
-				}
-				if pc.BrevoAdvancedProgramTemplateID != 0 {
-					emailTemplatesToSend[pc.BrevoAdvancedProgramTemplateID] = true
-				}
-			case pc.TailoredCoachingPriceID:
-				if pc.BrevoTailoredCoachingListID != 0 {
-					listIDsToAdd = append(listIDsToAdd, pc.BrevoTailoredCoachingListID)
-				}
-				if pc.BrevoTailoredCoachingTemplateID != 0 {
-					emailTemplatesToSend[pc.BrevoTailoredCoachingTemplateID] = true
-				}
-			}
-		}
-
-		if len(listIDsToAdd) > 0 {
-			err = pc.AddContactToBrevo(customerEmail, listIDsToAdd)
-			if err != nil {
-				log.Printf("Error adding contact %s to Brevo lists %v: %v", customerEmail, listIDsToAdd, err)
-			} else {
-				currentListsViaAPI, getErr := pc.GetContactBrevo(customerEmail)
-				if getErr != nil {
-					log.Printf("DIAGNOSTIC ERROR: Failed to get contact %s details from Brevo after update attempt: %v", customerEmail, getErr)
-				} else {
-					log.Printf("DIAGNOSTIC SUCCESS: Brevo API reports contact %s is now in lists: %v (After successful PUT/POST operation)", customerEmail, currentListsViaAPI)
-				}
-			}
-		} else {
-			log.Println("No Brevo lists identified for this purchase.")
-		}
-
-		for templateID := range emailTemplatesToSend {
-			emailParams := map[string]interface{}{
-				"CUSTOMER_EMAIL":  customerEmail,
-				"PURCHASED_ITEMS": purchasedProductNames,
-			}
-			err = pc.SendBrevoTransactionalEmail(customerEmail, templateID, emailParams)
-			if err != nil {
-				log.Printf("Error sending transactional email (Template ID: %d) to %s: %v", templateID, customerEmail, err)
-			}
-		}
-
-		if pc.BrevoOrderConfirmationTemplateID != 0 {
-			orderConfirmationParams := map[string]interface{}{
-				"ORDER_ID":       checkoutSession.ID,
-				"CUSTOMER_EMAIL": customerEmail,
-				"TOTAL_AMOUNT":   fmt.Sprintf("%.2f", float64(checkoutSession.AmountTotal)/100.0),
-				"CURRENCY":       checkoutSession.Currency,
-				"PRODUCT_NAMES":  purchasedProductNames,
-				"PURCHASE_DATE":  stripe.String(fmt.Sprintf("%d", checkoutSession.Created)),
-			}
-			err = pc.SendBrevoTransactionalEmail(customerEmail, pc.BrevoOrderConfirmationTemplateID, orderConfirmationParams)
-			if err != nil {
-				log.Printf("Error sending general order confirmation email to %s: %v", customerEmail, err)
-			}
-		} else {
-			log.Println("Warning: Brevo Order Confirmation Template ID not configured. Skipping general order confirmation email.")
-		}
-
-	case "invoice.payment_succeeded":
-		var invoice stripe.Invoice
-		err := json.Unmarshal(event.Data.Raw, &invoice)
-		if err != nil {
-			log.Printf("Error parsing invoice JSON: %v", err)
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event data"})
-			return
-		}
-
-		customerEmail := invoice.CustomerEmail
-		if customerEmail == "" && invoice.Customer != nil {
-			customer, custErr := pc.StripeClient.Customers.Get(invoice.Customer.ID, nil)
-			if custErr == nil && customer != nil {
-				customerEmail = customer.Email
-			}
-		}
-
-		if customerEmail != "" {
-			log.Printf("Invoice payment succeeded for invoice %s. Customer email: %s", invoice.ID, customerEmail)
-		} else {
-			log.Printf("Invoice payment succeeded for invoice %s, but customer email could not be determined.", invoice.ID)
-		}
-
+		log.Printf("Successfully created job for session %s", checkoutSession.ID)
 	default:
 		log.Printf("Unhandled event type: %s", event.Type)
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"received": true})
+	ctx.JSON(http.StatusOK, gin.H{"received": true, "message": "Webhook processed successfully"})
 }
 
-func (pc *PaymentController) getPriceUnitAmount(priceID string) (int64, error) {
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEmail string) error {
+	log.Printf("Starting background processing for session %s and email %s", sessionID, customerEmail)
+	log.Printf("Payment controller initialized with:")
+	log.Printf("  - Frontend URL: %s", pc.FrontendURL)
+	log.Printf("  - Brevo API Key configured: %v", pc.BrevoAPIKey != "")
+	log.Printf("  - Beginner Program Template ID: %d", pc.BrevoBeginnerProgramTemplateID)
+	log.Printf("  - Advanced Program Template ID: %d", pc.BrevoAdvancedProgramTemplateID)
+	log.Printf("  - Beginner List ID: %d", pc.BrevoBeginnerListID)
+	log.Printf("  - Advanced List ID: %d", pc.BrevoAdvancedListID)
+
+	// Replace the ctx-related code with direct calls
+	checkoutSession, err := pc.StripeClient.CheckoutSessions.Get(sessionID, nil)
+	if err != nil {
+		return fmt.Errorf("error fetching checkout session: %w", err)
+	}
+
+	// Now, insert all the logic you provided here
+	// The if `checkoutSession.PaymentStatus != stripe.CheckoutSessionPaymentStatusPaid` check is still useful.
+	if checkoutSession.PaymentStatus != stripe.CheckoutSessionPaymentStatusPaid {
+		return fmt.Errorf("session %s is not paid, status: %s", sessionID, checkoutSession.PaymentStatus)
+	}
+
+	// if checkoutSession.PaymentStatus != stripe.CheckoutSessionPaymentStatusPaid {
+	// 	log.Printf("Checkout session %s not paid. Skipping Brevo actions.", checkoutSession.ID)
+	// 	ctx.JSON(http.StatusOK, gin.H{"received": true, "message": "Payment not successful"})
+	// 	return
+	// }
+
+	log.Println("Payment status is 'paid'. Proceeding with Brevo actions.")
+
+	lineItemParams := &stripe.CheckoutSessionListLineItemsParams{
+		Session: stripe.String(checkoutSession.ID),
+	}
+	lineItemParams.Expand = []*string{stripe.String("data.price.product")}
+	lineItemIterator := pc.StripeClient.CheckoutSessions.ListLineItems(lineItemParams)
+
+	purchasedPriceIDs := []string{}
+	purchasedProductNames := []string{}
+	for lineItemIterator.Next() {
+		li := lineItemIterator.LineItem()
+		if li.Price != nil {
+			purchasedPriceIDs = append(purchasedPriceIDs, li.Price.ID)
+			if li.Price.Product != nil && li.Price.Product.Name != "" {
+				purchasedProductNames = append(purchasedProductNames, li.Price.Product.Name)
+			} else if li.Description != "" {
+				purchasedProductNames = append(purchasedProductNames, li.Description)
+			}
+		}
+	}
+	log.Printf("Purchased product price IDs: %v", purchasedPriceIDs)
+	log.Printf("Purchased product names: %v", purchasedProductNames)
+
+	isBeginnerProgramPurchased := false
+	isAdvancedProgramPurchased := false
+	for _, priceID := range purchasedPriceIDs {
+		if priceID == pc.BeginnerProgramPriceID {
+			isBeginnerProgramPurchased = true
+		}
+		if priceID == pc.AdvancedProgramPriceID {
+			isAdvancedProgramPurchased = true
+		}
+	}
+
+	log.Printf("Beginner Program purchased: %v", isBeginnerProgramPurchased)
+	log.Printf("Advanced Program purchased: %v", isAdvancedProgramPurchased)
+
+	// Handle beginner program purchase
+	if isBeginnerProgramPurchased {
+		log.Printf("Beginner Program purchased. Creating user account and auth token for %s", customerEmail)
+
+		// Step 1: Find or create the user account
+		userID, err := pc.FindOrCreateUser(customerEmail)
+		if err != nil {
+			log.Printf("Error finding or creating user: %v", err)
+		} else {
+			// Create a new auth token for this session
+			log.Printf("Creating new auth token for session %s", checkoutSession.ID)
+			const programName = "BeginnerProgram"
+			const dayNumber = 1
+			token, err := pc.CreateAuthToken(userID, programName, dayNumber)
+			if err != nil {
+				log.Printf("Error creating auth token: %v", err)
+			} else {
+				log.Printf("Generated token: %s for session %s", token, checkoutSession.ID)
+				// Link the new token to the session ID
+				var authToken models.AuthToken
+				if err := pc.DB.Where("token = ?", token).First(&authToken).Error; err == nil {
+					authToken.SessionID = checkoutSession.ID
+					pc.DB.Save(&authToken)
+					log.Printf("Successfully linked new token to session %s", checkoutSession.ID)
+				} else {
+					log.Printf("Error finding newly created token to link to session: %v", err)
+				}
+
+				workoutURL := fmt.Sprintf("%s/workout-auth?token=%s", pc.FrontendURL, token)
+				templateParams := map[string]interface{}{
+					"FIRSTNAME":    "Client",
+					"WORKOUT_LINK": workoutURL,
+				}
+
+				// Only send email if template ID is configured
+				if pc.BrevoBeginnerProgramTemplateID != 0 {
+					if err := pc.SendBrevoTransactionalEmail(customerEmail, pc.BrevoBeginnerProgramTemplateID, templateParams); err != nil {
+						log.Printf("Error sending beginner program email: %v", err)
+					} else {
+						log.Printf("Successfully sent Day 1 email with secure link to %s", customerEmail)
+					}
+				} else {
+					log.Printf("Brevo Beginner Program Template ID not configured. Skipping email for %s", customerEmail)
+					log.Printf("Workout URL generated: %s", workoutURL)
+				}
+			}
+		}
+	}
+
+	// Handle advanced program purchase
+	if isAdvancedProgramPurchased {
+		log.Printf("Advanced Program purchased. Creating user account and auth token for %s", customerEmail)
+		userID, err := pc.FindOrCreateUser(customerEmail)
+		if err != nil {
+			log.Printf("Error finding or creating user for Advanced Program: %v", err)
+		} else {
+			// Create a new auth token for this session
+			const programName = "AdvancedProgram"
+			const dayNumber = 1
+			token, err := pc.CreateAuthToken(userID, programName, dayNumber)
+			if err != nil {
+				log.Printf("Error creating auth token for Advanced Program: %v", err)
+			} else {
+				log.Printf("Generated token: %s for session %s", token, checkoutSession.ID)
+				// Link the new token to the session ID
+				var authToken models.AuthToken
+				if err := pc.DB.Where("token = ?", token).First(&authToken).Error; err == nil {
+					authToken.SessionID = checkoutSession.ID
+					pc.DB.Save(&authToken)
+					log.Printf("Successfully linked new token to session %s", checkoutSession.ID)
+				} else {
+					log.Printf("Error finding newly created token to link to session: %v", err)
+				}
+				workoutURL := fmt.Sprintf("%s/workout-auth?token=%s", pc.FrontendURL, token)
+				templateParams := map[string]interface{}{
+					"FIRSTNAME":    "Client",
+					"WORKOUT_LINK": workoutURL,
+				}
+
+				// Only send email if template ID is configured
+				if pc.BrevoAdvancedProgramTemplateID != 0 {
+					if err := pc.SendBrevoTransactionalEmail(customerEmail, pc.BrevoAdvancedProgramTemplateID, templateParams); err != nil {
+						log.Printf("Error sending advanced program email: %v", err)
+					} else {
+						log.Printf("Successfully sent Day 1 email with secure link for Advanced Program to %s", customerEmail)
+					}
+				} else {
+					log.Printf("Brevo Advanced Program Template ID not configured. Skipping email for %s", customerEmail)
+					log.Printf("Workout URL generated: %s", workoutURL)
+				}
+			}
+		}
+	}
+
+	listIDsToAdd := []int64{}
+	emailTemplatesToSend := make(map[int64]bool)
+
+	if pc.BrevoNewsletterListID != 0 {
+		listIDsToAdd = append(listIDsToAdd, pc.BrevoNewsletterListID)
+		log.Printf("Added Newsletter List ID: %d", pc.BrevoNewsletterListID)
+	} else {
+		log.Println("Warning: Brevo Newsletter List ID not configured. Skipping newsletter subscription.")
+	}
+
+	// Iterate through purchased items and add relevant list and template IDs
+	for i, priceID := range purchasedPriceIDs {
+		productName := purchasedProductNames[i]
+		log.Printf("Checking product: %s (Price ID: %s)", productName, priceID)
+
+		// Logic for Mindset Package
+		if priceID == pc.UltimateMindsetPackagePriceID || strings.Contains(strings.ToLower(productName), "mindset") {
+			if pc.BrevoMindsetListID != 0 {
+				listIDsToAdd = append(listIDsToAdd, pc.BrevoMindsetListID)
+				log.Printf("Matched Mindset Package. Added List ID: %d", pc.BrevoMindsetListID)
+			} else {
+				log.Println("Warning: Brevo Mindset Package List ID not configured.")
+			}
+			if pc.BrevoMindsetPackageTemplateID != 0 {
+				emailTemplatesToSend[pc.BrevoMindsetPackageTemplateID] = true
+				log.Printf("Matched Mindset Package. Added Email Template ID: %d", pc.BrevoMindsetPackageTemplateID)
+			} else {
+				log.Println("Warning: Brevo Mindset Package Template ID not configured.")
+			}
+		}
+
+		// Logic for other programs
+		switch priceID {
+		case pc.BeginnerProgramPriceID:
+			if pc.BrevoBeginnerListID != 0 {
+				listIDsToAdd = append(listIDsToAdd, pc.BrevoBeginnerListID)
+				log.Printf("Matched Beginner Program. Added List ID: %d", pc.BrevoBeginnerListID)
+			}
+			if pc.BrevoBeginnerProgramTemplateID != 0 {
+				emailTemplatesToSend[pc.BrevoBeginnerProgramTemplateID] = true
+				log.Printf("Matched Beginner Program. Added Email Template ID: %d", pc.BrevoBeginnerProgramTemplateID)
+			}
+		case pc.AdvancedProgramPriceID:
+			if pc.BrevoAdvancedListID != 0 {
+				listIDsToAdd = append(listIDsToAdd, pc.BrevoAdvancedListID)
+				log.Printf("Matched Advanced Program. Added List ID: %d", pc.BrevoAdvancedListID)
+			}
+			if pc.BrevoAdvancedProgramTemplateID != 0 {
+				emailTemplatesToSend[pc.BrevoAdvancedProgramTemplateID] = true
+				log.Printf("Matched Advanced Program. Added Email Template ID: %d", pc.BrevoAdvancedProgramTemplateID)
+			}
+		case pc.TailoredCoachingPriceID:
+			if pc.BrevoTailoredCoachingListID != 0 {
+				listIDsToAdd = append(listIDsToAdd, pc.BrevoTailoredCoachingListID)
+				log.Printf("Matched Tailored Coaching. Added List ID: %d", pc.BrevoTailoredCoachingListID)
+			}
+			if pc.BrevoTailoredCoachingTemplateID != 0 {
+				emailTemplatesToSend[pc.BrevoTailoredCoachingTemplateID] = true
+				log.Printf("Matched Tailored Coaching. Added Email Template ID: %d", pc.BrevoTailoredCoachingTemplateID)
+			}
+		}
+	}
+
+	log.Printf("Final list of Brevo list IDs to add: %v", listIDsToAdd)
+	log.Printf("Final list of Brevo email template IDs to send: %v", emailTemplatesToSend)
+
+	// Add contact to Brevo lists
+	if len(listIDsToAdd) > 0 {
+		log.Printf("Calling AddContactToBrevo for email: %s with lists: %v", customerEmail, listIDsToAdd)
+		err = pc.AddContactToBrevo(customerEmail, listIDsToAdd)
+		if err != nil {
+			log.Printf("Error adding contact %s to Brevo lists %v: %v", customerEmail, listIDsToAdd, err)
+		} else {
+			log.Printf("Successfully added contact %s to Brevo lists: %v", customerEmail, listIDsToAdd)
+		}
+	} else {
+		log.Println("No Brevo lists identified for this purchase.")
+	}
+
+	// Send all identified transactional emails
+	for templateID := range emailTemplatesToSend {
+		log.Printf("Attempting to send transactional email with Template ID: %d to %s", templateID, customerEmail)
+		// These parameters can be customized for each email template
+		emailParams := map[string]interface{}{
+			"CUSTOMER_EMAIL":  customerEmail,
+			"PURCHASED_ITEMS": purchasedProductNames,
+		}
+		err = pc.SendBrevoTransactionalEmail(customerEmail, templateID, emailParams)
+		if err != nil {
+			log.Printf("Error sending transactional email (Template ID: %d) to %s: %v", templateID, customerEmail, err)
+		} else {
+			log.Printf("Successfully sent transactional email (Template ID: %d) to %s", templateID, customerEmail)
+		}
+	}
+
+	// Send the general order confirmation email, if configured
+	if pc.BrevoOrderConfirmationTemplateID != 0 {
+		log.Printf("Attempting to send order confirmation email (Template ID: %d) to %s", pc.BrevoOrderConfirmationTemplateID, customerEmail)
+		orderConfirmationParams := map[string]interface{}{
+			"ORDER_ID":       checkoutSession.ID,
+			"CUSTOMER_EMAIL": customerEmail,
+			"TOTAL_AMOUNT":   fmt.Sprintf("%.2f", float64(checkoutSession.AmountTotal)/100.0),
+			"CURRENCY":       checkoutSession.Currency,
+			"PRODUCT_NAMES":  purchasedProductNames,
+			"PURCHASE_DATE":  time.Unix(checkoutSession.Created, 0).Format("2006-01-02"),
+		}
+		err = pc.SendBrevoTransactionalEmail(customerEmail, pc.BrevoOrderConfirmationTemplateID, orderConfirmationParams)
+		if err != nil {
+			log.Printf("Error sending general order confirmation email to %s: %v", customerEmail, err)
+		} else {
+			log.Printf("Successfully sent general order confirmation email to %s", customerEmail)
+		}
+	} else {
+		log.Println("Warning: Brevo Order Confirmation Template ID not configured. Skipping general order confirmation email.")
+	}
+
+	// case "invoice.payment_succeeded":
+	// 	log.Println("Processing 'invoice.payment_succeeded' event.")
+	// 	var invoice stripe.Invoice
+	// 	err := json.Unmarshal(event.Data.Raw, &invoice)
+	// 	if err != nil {
+	// 		log.Printf("Error parsing invoice JSON: %v", err)
+	// 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event data"})
+	// 		return
+	// 	}
+
+	// 	customerEmail := invoice.CustomerEmail
+	// 	if customerEmail == "" && invoice.Customer != nil {
+	// 		customer, custErr := pc.StripeClient.Customers.Get(invoice.Customer.ID, nil)
+	// 		if custErr == nil && customer != nil {
+	// 			customerEmail = customer.Email
+	// 		}
+	// 	}
+
+	// 	if customerEmail != "" {
+	// 		log.Printf("Invoice payment succeeded for invoice %s. Customer email: %s", invoice.ID, customerEmail)
+	// 	} else {
+	// 		log.Printf("Invoice payment succeeded for invoice %s, but customer email could not be determined.", invoice.ID)
+	// 	}
+
+	// default:
+	// 	log.Printf("Unhandled event type: %s", event.Type)
+	// }
+
+	log.Printf("Background processing for session %s completed successfully", sessionID)
+	return nil
+}
+
+func (pc *PaymentController) GetPriceUnitAmount(priceID string) (int64, error) {
 	price, err := pc.StripeClient.Prices.Get(priceID, nil)
 	if err != nil {
 		return 0, err
@@ -656,4 +940,86 @@ func mergeUniqueInt64(existing, additions []int64) []int64 {
 		merged = append(merged, id)
 	}
 	return merged
+}
+
+func (pc *PaymentController) GetWorkoutLink(ctx *gin.Context) {
+	var req struct {
+		SessionID string `json:"sessionId" binding:"required"`
+	}
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		log.Printf("Invalid request payload for GetWorkoutLink: %v", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		return
+	}
+
+	log.Printf("Attempting to retrieve workout link for session: %s", req.SessionID)
+
+	// First, try to find the token in the database
+	var authToken models.AuthToken
+	dbErr := pc.DB.Where("session_id = ?", req.SessionID).First(&authToken).Error
+
+	if dbErr == nil {
+		// Token was found, so we can immediately return the link
+		workoutURL := fmt.Sprintf("%s/workout-auth?token=%s", pc.FrontendURL, authToken.Token)
+		log.Printf("Successfully found token for session %s. URL: %s", req.SessionID, workoutURL)
+		ctx.JSON(http.StatusOK, gin.H{"workoutLink": workoutURL})
+		return
+	}
+
+	// If the token was not found, check the database error
+	if dbErr != gorm.ErrRecordNotFound {
+		log.Printf("Database error retrieving token for session %s: %v", req.SessionID, dbErr)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve workout link from database"})
+		return
+	}
+
+	// If we're here, the record was not found (gorm.ErrRecordNotFound)
+	log.Printf("No auth token found for session %s. Checking Stripe status.", req.SessionID)
+
+	// Check Stripe to see if the session is valid and paid
+	session, stripeErr := pc.StripeClient.CheckoutSessions.Get(req.SessionID, nil)
+	if stripeErr != nil {
+		log.Printf("Stripe API error for session %s: %v", req.SessionID, stripeErr)
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "Invalid session ID or Stripe API error."})
+		return
+	}
+
+	// If session is paid, but token not found, webhook is still processing
+	if session.PaymentStatus == stripe.CheckoutSessionPaymentStatusPaid {
+		log.Printf("Stripe session %s is paid, but token not found. Webhook is likely still processing.", req.SessionID)
+
+		// Check if there's a pending job for this session
+		var job models.Job
+		if pc.DB.Where("session_id = ? AND status IN (?)", req.SessionID, []string{"pending", "processing"}).First(&job).Error == nil {
+			ctx.JSON(http.StatusAccepted, gin.H{
+				"error":   "Workout link is being prepared. Please check your email or try again in a moment.",
+				"status":  "processing",
+				"message": "Payment confirmed, processing your workout access...",
+			})
+		} else {
+			ctx.JSON(http.StatusAccepted, gin.H{
+				"error":   "Workout link is being prepared. Please check your email or try again in a moment.",
+				"status":  "processing",
+				"message": "Payment confirmed, setting up your account...",
+			})
+		}
+		return
+	}
+
+	// If we're here, the session is not paid
+	log.Printf("Stripe session %s is not paid. Payment status: %s", req.SessionID, session.PaymentStatus)
+	ctx.JSON(http.StatusNotFound, gin.H{"error": "Payment not completed for this session."})
+}
+
+func (pc *PaymentController) TestWebhook(ctx *gin.Context) {
+	log.Printf("=== WEBHOOK TEST ENDPOINT HIT ===")
+	log.Printf("Headers: %v", ctx.Request.Header)
+	log.Printf("Method: %s", ctx.Request.Method)
+	log.Printf("URL: %s", ctx.Request.URL.String())
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message":                   "Webhook endpoint is reachable",
+		"timestamp":                 time.Now().Unix(),
+		"webhook_secret_configured": len(pc.StripeWebhookSecret) > 0,
+	})
 }

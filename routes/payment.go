@@ -10,5 +10,7 @@ func RegisterPaymentRoutes(router *gin.Engine, pc *controllers.PaymentController
 	{
 		api.POST("/create-checkout-session", pc.CreateCheckoutSession)
 		api.POST("/stripe-webhook", pc.StripeWebhook)
+		api.GET("/test-webhook", pc.TestWebhook) // Test endpoint
+		api.POST("/get-workout-link", pc.GetWorkoutLink)
 	}
 }

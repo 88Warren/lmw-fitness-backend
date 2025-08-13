@@ -10,6 +10,7 @@ import (
 	"github.com/88warren/lmw-fitness-backend/middleware"
 	"github.com/88warren/lmw-fitness-backend/models"
 	"github.com/88warren/lmw-fitness-backend/routes"
+	"github.com/88warren/lmw-fitness-backend/workers"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
@@ -131,7 +132,7 @@ func SetupHandlers(router *gin.Engine, db *gorm.DB) {
 
 	homeController := controllers.NewHomeController(db)
 	healthController := controllers.NewHealthController(db)
-	paymentController := controllers.NewPaymentController()
+	paymentController := controllers.NewPaymentController(db)
 	blogController := controllers.NewBlogController(db)
 	userController := controllers.NewUserController(db)
 	newsletterController := controllers.NewNewsletterController(db)
@@ -144,4 +145,9 @@ func SetupHandlers(router *gin.Engine, db *gorm.DB) {
 	routes.RegisterUserRoutes(router, userController)
 	routes.RegisterNewsletterRoutes(router, newsletterController)
 	routes.RegisterWorkoutRoutes(router, workoutController)
+
+	// Start the payment processing worker in a goroutine
+	go func() {
+		workers.StartPaymentWorker(db, paymentController)
+	}()
 }

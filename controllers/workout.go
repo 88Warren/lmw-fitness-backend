@@ -56,6 +56,51 @@ func (wc *WorkoutController) GetWorkoutDay(c *gin.Context) {
 	c.JSON(http.StatusOK, workoutDay)
 }
 
+// GetWorkoutDayByProgramAndDay retrieves a specific workout day with its blocks and exercises
+// It uses the program's URL-friendly name and the day number.
+func (wc *WorkoutController) GetWorkoutDayByProgramAndDay(c *gin.Context) {
+	programName := c.Param("programName")
+	dayNumberStr := c.Param("dayNumber")
+
+	dayNumber, err := strconv.Atoi(dayNumberStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid day number"})
+		return
+	}
+
+	var program models.WorkoutProgram
+	var dbProgramName string
+
+	// Use a switch statement to map the URL-friendly name to the full database name
+	switch programName {
+	case "beginner-program":
+		dbProgramName = "30-Day Beginner Program"
+	case "advanced-program":
+		dbProgramName = "30-Day Advanced Program"
+	default:
+		c.JSON(http.StatusNotFound, gin.H{"error": "Program not found"})
+		return
+	}
+
+	// Now, find the program using the exact database name
+	if err := wc.DB.Where("name = ?", dbProgramName).First(&program).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Program not found"})
+		return
+	}
+
+	var workoutDay models.WorkoutDay
+
+	// Now, use the program ID and day number to find the specific workout day
+	if err := wc.DB.Where("program_id = ? AND day_number = ?", program.ID, dayNumber).
+		Preload("WorkoutBlocks.Exercises.Exercise").
+		First(&workoutDay).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Workout day not found for this program"})
+		return
+	}
+
+	c.JSON(http.StatusOK, workoutDay)
+}
+
 // StartWorkout initiates a new workout session for a user on a given day
 func (wc *WorkoutController) StartWorkout(c *gin.Context) {
 	var req struct {

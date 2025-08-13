@@ -31,6 +31,10 @@ func NewUserController(db *gorm.DB) *UserController {
 	return &UserController{DB: db}
 }
 
+type VerifyTokenRequest struct {
+	Token string `json:"token" binding:"required"`
+}
+
 var (
 	hasUpperCase   = regexp.MustCompile(`[A-Z]`)
 	hasSpecialChar = regexp.MustCompile(`[!@#$^&*]`)
@@ -79,7 +83,7 @@ func (uc *UserController) RegisterUser(ctx *gin.Context) {
 	}
 
 	// Generate JWT token for the newly registered user
-	token, err := GenerateJWT(user.ID, user.Email, user.Role)
+	token, err := uc.GenerateJWT(user.ID, user.Email, user.Role)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
@@ -125,7 +129,7 @@ func (uc *UserController) LoginUser(ctx *gin.Context) {
 	}
 
 	// Generate JWT token
-	token, err := GenerateJWT(user.ID, user.Email, user.Role)
+	token, err := uc.GenerateJWT(user.ID, user.Email, user.Role)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
@@ -250,7 +254,7 @@ func (uc *UserController) ChangePassword(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "Password changed successfully!"})
 }
 
-func GenerateJWT(userID uint, email, role string) (string, error) {
+func (uc *UserController) GenerateJWT(userID uint, email, role string) (string, error) {
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		// log.Println("JWT_SECRET environment variable not set. Using a default (NOT SECURE FOR PRODUCTION!).")
@@ -490,4 +494,120 @@ func getSMTPPasswordFromSecrets() string {
 	}
 
 	return string(secret.Data["SMTP_PASSWORD"])
+}
+
+func (uc *UserController) VerifyWorkoutToken(ctx *gin.Context) {
+	var req VerifyTokenRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		return
+	}
+
+	var authToken models.AuthToken
+	// Find the token and ensure it has not been used
+	if err := uc.DB.Where("token = ? AND is_used = ?", req.Token, false).First(&authToken).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		return
+	}
+
+	// Mark the token as used to prevent replay attacks
+	authToken.IsUsed = true
+	uc.DB.Save(&authToken)
+
+	// Retrieve the user associated with the token
+	var user models.User
+	if err := uc.DB.First(&user, authToken.UserID).Error; err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "User not found"})
+		return
+	}
+
+	userResponse := models.UserResponse{
+		ID:                 user.ID,
+		Email:              user.Email,
+		Role:               user.Role,
+		MustChangePassword: user.MustChangePassword,
+	}
+
+	tokenString, err := uc.GenerateJWT(user.ID, user.Email, user.Role) // Assuming you have this function
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "Token verified, user authenticated",
+		"user":    userResponse,
+		"jwt":     tokenString,
+	})
+}
+
+func (uc *UserController) SetFirstTimePassword(ctx *gin.Context) {
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	var req struct {
+		NewPassword        string `json:"newPassword" binding:"required"`
+		ConfirmNewPassword string `json:"confirmNewPassword" binding:"required"`
+	}
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 1. Validate new password complexity
+	if err := ValidatePassword(req.NewPassword); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 2. Check if new password matches confirmation
+	if req.NewPassword != req.ConfirmNewPassword {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "New password and confirmation do not match."})
+		return
+	}
+
+	// 3. Find the user
+	var user models.User
+	if result := uc.DB.First(&user, userID); result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found."})
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Database error finding user."})
+		return
+	}
+
+	// 4. Verify this is a first-time user
+	if !user.MustChangePassword {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "This endpoint is only for first-time password setup."})
+		return
+	}
+
+	// 5. Hash the new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash new password."})
+		return
+	}
+
+	// 6. Update user's password and set MustChangePassword to false
+	user.PasswordHash = string(hashedPassword)
+	user.MustChangePassword = false
+
+	log.Printf("User %d first-time password set, mustChangePassword updated to: %v", user.ID, user.MustChangePassword)
+
+	if result := uc.DB.Save(&user); result.Error != nil {
+		log.Printf("Error updating user password: %v", result.Error)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password."})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Password set successfully! You can now access your workout."})
 }

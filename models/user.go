@@ -13,6 +13,7 @@ type User struct {
 	Role                string               `gorm:"not null;default:'user'" json:"role"`
 	PasswordResetTokens []PasswordResetToken `gorm:"foreignKey:UserID"`
 	MustChangePassword  bool                 `gorm:"default:true"`
+	AuthTokens          []AuthToken          `gorm:"foreignKey:UserID"`
 }
 
 type UserResponse struct {

@@ -51,6 +51,8 @@ func MigrateDB() {
 	log.Println("Starting database migration...")
 
 	err := DB.AutoMigrate(
+		&models.AuthToken{},
+		&models.Job{},
 		&models.User{},
 		&models.PasswordResetToken{},
 		&models.WorkoutProgram{},
