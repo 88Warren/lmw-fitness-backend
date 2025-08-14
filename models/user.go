@@ -17,10 +17,11 @@ type User struct {
 }
 
 type UserResponse struct {
-	ID                 uint   `json:"id"`
-	Email              string `json:"email"`
-	Role               string `json:"role"`
-	MustChangePassword bool   `json:"mustChangePassword"`
+	ID                 uint     `json:"id"`
+	Email              string   `json:"email"`
+	Role               string   `json:"role"`
+	MustChangePassword bool     `json:"mustChangePassword"`
+	PurchasedPrograms  []string `json:"purchasedPrograms"`
 }
 
 type LoginRequest struct {

@@ -12,14 +12,14 @@ func ProgramSeed() {
 
 	programmes := []models.WorkoutProgram{
 		{
-			Name:        "30-Day Beginner Program",
+			Name:        "beginner-program",
 			Description: "A comprehensive 30-day program designed for fitness beginners",
 			Difficulty:  "beginner",
 			Duration:    30,
 			IsActive:    true,
 		},
 		{
-			Name:        "30-Day Advanced Program",
+			Name:        "advanced-program",
 			Description: "A challenging 30-day program for experienced fitness enthusiasts",
 			Difficulty:  "advanced",
 			Duration:    30,

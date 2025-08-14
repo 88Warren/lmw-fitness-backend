@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/88warren/lmw-fitness-backend/models"
+	"github.com/88warren/lmw-fitness-backend/workers"
 	"github.com/gin-gonic/gin"
 	"github.com/stripe/stripe-go/v82"
 	"github.com/stripe/stripe-go/v82/client"
@@ -208,13 +209,14 @@ func (pc *PaymentController) FindOrCreateUser(email string) (uint, error) {
 	return user.ID, nil
 }
 
-func (pc *PaymentController) CreateAuthToken(userID uint, programName string, dayNumber int) (string, error) {
+func (pc *PaymentController) CreateAuthToken(userID uint, programName string, dayNumber int, sessionID string) (string, error) {
 	token := GenerateRandomToken()
 
 	authToken := models.AuthToken{
 		UserID:      userID,
 		Token:       token,
 		ProgramName: programName,
+		SessionID:   sessionID,
 		DayNumber:   dayNumber,
 		IsUsed:      false,
 	}
@@ -517,10 +519,11 @@ func (pc *PaymentController) StripeWebhook(ctx *gin.Context) {
 	log.Printf("Webhook signature verified successfully")
 	log.Printf("Received webhook event of type: %s", event.Type)
 	log.Printf("Event ID: %s", event.ID)
+	log.Printf("Event data preview: %s", string(event.Data.Raw[:min(len(event.Data.Raw), 500)]))
 
 	switch event.Type {
-	case "checkout.session.completed":
-		log.Println("=== Processing 'checkout.session.completed' event ===")
+	case "checkout.session.payment_succeeded":
+		log.Println("=== Processing 'checkout.session.payment_succeeded' event ===")
 		var checkoutSession stripe.CheckoutSession
 		err := json.Unmarshal(event.Data.Raw, &checkoutSession)
 		if err != nil {
@@ -534,6 +537,13 @@ func (pc *PaymentController) StripeWebhook(ctx *gin.Context) {
 		log.Printf("  - Payment Status: %s", checkoutSession.PaymentStatus)
 		log.Printf("  - Customer Email: %s", checkoutSession.CustomerDetails.Email)
 
+		// Only process if payment is actually succeeded
+		if checkoutSession.PaymentStatus != stripe.CheckoutSessionPaymentStatusPaid {
+			log.Printf("Checkout session %s payment not completed yet. Status: %s", checkoutSession.ID, checkoutSession.PaymentStatus)
+			ctx.JSON(http.StatusOK, gin.H{"received": true, "message": "Payment not completed yet"})
+			return
+		}
+
 		customerEmail := checkoutSession.CustomerDetails.Email
 		if customerEmail == "" {
 			log.Printf("Checkout session completed but no customer email found for session %s", checkoutSession.ID)
@@ -541,7 +551,7 @@ func (pc *PaymentController) StripeWebhook(ctx *gin.Context) {
 			return
 		}
 
-		log.Printf("Checkout session %s completed for email: %s", checkoutSession.ID, customerEmail)
+		log.Printf("Checkout session %s payment succeeded for email: %s", checkoutSession.ID, customerEmail)
 
 		job := models.Job{
 			SessionID:     checkoutSession.ID,
@@ -558,6 +568,89 @@ func (pc *PaymentController) StripeWebhook(ctx *gin.Context) {
 		}
 
 		log.Printf("Successfully created job for session %s", checkoutSession.ID)
+
+		// Trigger immediate processing
+		if workers.GetGlobalProcessor() != nil {
+			workers.GetGlobalProcessor().TriggerJobProcessing()
+			log.Printf("Triggered immediate job processing for session %s", checkoutSession.ID)
+		} else {
+			log.Printf("Warning: Global processor not available, job will be processed on next fallback cycle")
+		}
+
+	case "checkout.session.completed":
+		log.Println("=== Processing 'checkout.session.completed' event ===")
+		var checkoutSession stripe.CheckoutSession
+		err := json.Unmarshal(event.Data.Raw, &checkoutSession)
+		if err != nil {
+			log.Printf("Error parsing webhook JSON: %v", err)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event data"})
+			return
+		}
+
+		log.Printf("Checkout session completed (fallback):")
+		log.Printf("  - Session ID: %s", checkoutSession.ID)
+		log.Printf("  - Payment Status: %s", checkoutSession.PaymentStatus)
+		log.Printf("  - Customer Email: %s", checkoutSession.CustomerDetails.Email)
+
+		// Only process if payment is actually completed
+		if checkoutSession.PaymentStatus != stripe.CheckoutSessionPaymentStatusPaid {
+			log.Printf("Checkout session %s payment not completed yet. Status: %s", checkoutSession.ID, checkoutSession.PaymentStatus)
+			ctx.JSON(http.StatusOK, gin.H{"received": true, "message": "Payment not completed yet"})
+			return
+		}
+
+		customerEmail := checkoutSession.CustomerDetails.Email
+		if customerEmail == "" {
+			log.Printf("Checkout session completed but no customer email found for session %s", checkoutSession.ID)
+			ctx.JSON(http.StatusOK, gin.H{"received": true, "message": "No customer email to process"})
+			return
+		}
+
+		log.Printf("Checkout session %s payment completed for email: %s (fallback)", checkoutSession.ID, customerEmail)
+
+		// Check if job already exists
+		var existingJob models.Job
+		if pc.DB.Where("session_id = ?", checkoutSession.ID).First(&existingJob).Error == nil {
+			log.Printf("Job already exists for session %s, skipping duplicate creation", checkoutSession.ID)
+			ctx.JSON(http.StatusOK, gin.H{"received": true, "message": "Job already exists"})
+			return
+		}
+
+		job := models.Job{
+			SessionID:     checkoutSession.ID,
+			CustomerEmail: customerEmail,
+			Status:        "pending",
+			Attempts:      0,
+		}
+
+		log.Printf("Creating job in database (fallback): %+v", job)
+		if result := pc.DB.Create(&job); result.Error != nil {
+			log.Printf("Failed to create job for session %s: %v", checkoutSession.ID, result.Error)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create job"})
+			return
+		}
+
+		log.Printf("Successfully created job for session %s (fallback)", checkoutSession.ID)
+
+		// Trigger immediate processing
+		if workers.GetGlobalProcessor() != nil {
+			workers.GetGlobalProcessor().TriggerJobProcessing()
+			log.Printf("Triggered immediate job processing for session %s (fallback)", checkoutSession.ID)
+		} else {
+			log.Printf("Warning: Global processor not available, job will be processed on next fallback cycle")
+		}
+
+	case "payment_intent.succeeded":
+		log.Println("=== Processing 'payment_intent.succeeded' event ===")
+		var paymentIntent stripe.PaymentIntent
+		err := json.Unmarshal(event.Data.Raw, &paymentIntent)
+		if err != nil {
+			log.Printf("Error parsing payment intent JSON: %v", err)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event data"})
+			return
+		}
+		log.Printf("Payment intent succeeded: %s", paymentIntent.ID)
+
 	default:
 		log.Printf("Unhandled event type: %s", event.Type)
 	}
@@ -573,24 +666,29 @@ func min(a, b int) int {
 }
 
 func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEmail string) error {
-	log.Printf("Starting background processing for session %s and email %s", sessionID, customerEmail)
-	log.Printf("Payment controller initialized with:")
+	log.Printf("[DEBUG] Starting ProcessPaymentSuccess for session %s, email %s", sessionID, customerEmail)
+	log.Printf("[DEBUG] Payment controller configuration:")
 	log.Printf("  - Frontend URL: %s", pc.FrontendURL)
 	log.Printf("  - Brevo API Key configured: %v", pc.BrevoAPIKey != "")
 	log.Printf("  - Beginner Program Template ID: %d", pc.BrevoBeginnerProgramTemplateID)
 	log.Printf("  - Advanced Program Template ID: %d", pc.BrevoAdvancedProgramTemplateID)
 	log.Printf("  - Beginner List ID: %d", pc.BrevoBeginnerListID)
 	log.Printf("  - Advanced List ID: %d", pc.BrevoAdvancedListID)
+	log.Printf("  - Beginner Program Price ID: %s", pc.BeginnerProgramPriceID)
+	log.Printf("  - Advanced Program Price ID: %s", pc.AdvancedProgramPriceID)
 
-	// Replace the ctx-related code with direct calls
+	log.Printf("[DEBUG] Fetching checkout session %s from Stripe", sessionID)
 	checkoutSession, err := pc.StripeClient.CheckoutSessions.Get(sessionID, nil)
 	if err != nil {
+		log.Printf("[ERROR] Failed to fetch checkout session: %v", err)
 		return fmt.Errorf("error fetching checkout session: %w", err)
 	}
 
-	// Now, insert all the logic you provided here
-	// The if `checkoutSession.PaymentStatus != stripe.CheckoutSessionPaymentStatusPaid` check is still useful.
+	log.Printf("[DEBUG] Retrieved checkout session: ID=%s, PaymentStatus=%s, AmountTotal=%d, Currency=%s",
+		checkoutSession.ID, checkoutSession.PaymentStatus, checkoutSession.AmountTotal, checkoutSession.Currency)
+
 	if checkoutSession.PaymentStatus != stripe.CheckoutSessionPaymentStatusPaid {
+		log.Printf("[WARN] Session %s is not paid, status: %s", sessionID, checkoutSession.PaymentStatus)
 		return fmt.Errorf("session %s is not paid, status: %s", sessionID, checkoutSession.PaymentStatus)
 	}
 
@@ -602,6 +700,7 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 
 	log.Println("Payment status is 'paid'. Proceeding with Brevo actions.")
 
+	log.Printf("[DEBUG] Fetching line items for session %s", checkoutSession.ID)
 	lineItemParams := &stripe.CheckoutSessionListLineItemsParams{
 		Session: stripe.String(checkoutSession.ID),
 	}
@@ -612,6 +711,8 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 	purchasedProductNames := []string{}
 	for lineItemIterator.Next() {
 		li := lineItemIterator.LineItem()
+		log.Printf("[DEBUG] Processing line item: ID=%s, Description=%s, Quantity=%d",
+			li.ID, li.Description, li.Quantity)
 		if li.Price != nil {
 			purchasedPriceIDs = append(purchasedPriceIDs, li.Price.ID)
 			if li.Price.Product != nil && li.Price.Product.Name != "" {
@@ -648,25 +749,27 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 			log.Printf("Error finding or creating user: %v", err)
 		} else {
 			// Create a new auth token for this session
+			log.Printf("[DEBUG] User ID for beginner program: %d", userID)
 			log.Printf("Creating new auth token for session %s", checkoutSession.ID)
-			const programName = "BeginnerProgram"
+			const programName = "beginner-program"
 			const dayNumber = 1
-			token, err := pc.CreateAuthToken(userID, programName, dayNumber)
+			token, err := pc.CreateAuthToken(userID, programName, dayNumber, checkoutSession.ID)
 			if err != nil {
 				log.Printf("Error creating auth token: %v", err)
 			} else {
 				log.Printf("Generated token: %s for session %s", token, checkoutSession.ID)
 				// Link the new token to the session ID
-				var authToken models.AuthToken
-				if err := pc.DB.Where("token = ?", token).First(&authToken).Error; err == nil {
-					authToken.SessionID = checkoutSession.ID
-					pc.DB.Save(&authToken)
-					log.Printf("Successfully linked new token to session %s", checkoutSession.ID)
-				} else {
-					log.Printf("Error finding newly created token to link to session: %v", err)
-				}
+				// var authToken models.AuthToken
+				// if err := pc.DB.Where("token = ?", token).First(&authToken).Error; err == nil {
+				// 	authToken.SessionID = checkoutSession.ID
+				// 	pc.DB.Save(&authToken)
+				// 	log.Printf("Successfully linked new token to session %s", checkoutSession.ID)
+				// } else {
+				// 	log.Printf("Error finding newly created token to link to session: %v", err)
+				// }
 
 				workoutURL := fmt.Sprintf("%s/workout-auth?token=%s", pc.FrontendURL, token)
+				log.Printf("[DEBUG] Generated workout URL for beginner program: %s", workoutURL)
 				templateParams := map[string]interface{}{
 					"FIRSTNAME":    "Client",
 					"WORKOUT_LINK": workoutURL,
@@ -695,9 +798,9 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 			log.Printf("Error finding or creating user for Advanced Program: %v", err)
 		} else {
 			// Create a new auth token for this session
-			const programName = "AdvancedProgram"
+			const programName = "advanced-program"
 			const dayNumber = 1
-			token, err := pc.CreateAuthToken(userID, programName, dayNumber)
+			token, err := pc.CreateAuthToken(userID, programName, dayNumber, checkoutSession.ID)
 			if err != nil {
 				log.Printf("Error creating auth token for Advanced Program: %v", err)
 			} else {
@@ -959,7 +1062,7 @@ func (pc *PaymentController) GetWorkoutLink(ctx *gin.Context) {
 	dbErr := pc.DB.Where("session_id = ?", req.SessionID).First(&authToken).Error
 
 	if dbErr == nil {
-		// Token was found, so we can immediately return the link
+		log.Printf("Auth token found: %+v", authToken)
 		workoutURL := fmt.Sprintf("%s/workout-auth?token=%s", pc.FrontendURL, authToken.Token)
 		log.Printf("Successfully found token for session %s. URL: %s", req.SessionID, workoutURL)
 		ctx.JSON(http.StatusOK, gin.H{"workoutLink": workoutURL})
@@ -1017,9 +1120,26 @@ func (pc *PaymentController) TestWebhook(ctx *gin.Context) {
 	log.Printf("Method: %s", ctx.Request.Method)
 	log.Printf("URL: %s", ctx.Request.URL.String())
 
+	// Test database connection
+	var jobCount int64
+	if err := pc.DB.Model(&models.Job{}).Count(&jobCount).Error; err != nil {
+		log.Printf("Database error: %v", err)
+	} else {
+		log.Printf("Database connection successful. Total jobs: %d", jobCount)
+	}
+
+	// Test worker status
+	workerStatus := "not available"
+	if workers.GetGlobalProcessor() != nil {
+		workerStatus = "available"
+	}
+
 	ctx.JSON(http.StatusOK, gin.H{
 		"message":                   "Webhook endpoint is reachable",
 		"timestamp":                 time.Now().Unix(),
 		"webhook_secret_configured": len(pc.StripeWebhookSecret) > 0,
+		"database_connected":        true,
+		"total_jobs":                jobCount,
+		"worker_status":             workerStatus,
 	})
 }

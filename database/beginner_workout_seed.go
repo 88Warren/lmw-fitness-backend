@@ -29,7 +29,7 @@ func getProgramIDByName(db *gorm.DB, name string) (uint, error) {
 func BeginnerWorkoutDaySeed() {
 	log.Println("Seeding workout day, block, and exercise data for the 30-Day Beginner Program...")
 
-	programID, err := getProgramIDByName(DB, "30-Day Beginner Program")
+	programID, err := getProgramIDByName(DB, "beginner-program")
 	if err != nil {
 		log.Fatalf("Failed to find '30-Day Beginner Program': %v", err)
 	}

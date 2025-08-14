@@ -9,7 +9,7 @@ import (
 func AdvancedWorkoutDaySeed() {
 	log.Println("Seeding workout day, block, and exercise data for the 30-Day Advanced Programme...")
 
-	programID, err := getProgramIDByName(DB, "30-Day Advanced Program")
+	programID, err := getProgramIDByName(DB, "advanced-program")
 	if err != nil {
 		log.Fatalf("Failed to find '30-Day Advanced Program': %v", err)
 	}

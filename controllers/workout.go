@@ -2,6 +2,7 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -57,10 +58,18 @@ func (wc *WorkoutController) GetWorkoutDay(c *gin.Context) {
 }
 
 // GetWorkoutDayByProgramAndDay retrieves a specific workout day with its blocks and exercises
-// It uses the program's URL-friendly name and the day number.
 func (wc *WorkoutController) GetWorkoutDayByProgramAndDay(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		fmt.Println("Backend: Authorization check failed - No userID in context.")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	fmt.Printf("Backend: User ID from context: %v\n", userID)
+
 	programName := c.Param("programName")
 	dayNumberStr := c.Param("dayNumber")
+	fmt.Printf("Backend: URL Params - ProgramName: %s, DayNumber: %s\n", programName, dayNumberStr)
 
 	dayNumber, err := strconv.Atoi(dayNumberStr)
 	if err != nil {
@@ -68,35 +77,106 @@ func (wc *WorkoutController) GetWorkoutDayByProgramAndDay(c *gin.Context) {
 		return
 	}
 
+	// 1. Fetch the user with their AuthTokens preloaded
+	var user models.User
+	fmt.Printf("Backend: Attempting to fetch user %v with AuthTokens from DB.\n", userID)
+	if err := wc.DB.Preload("AuthTokens").First(&user, userID).Error; err != nil {
+		fmt.Printf("Backend: Error fetching user: %v\n", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		return
+	}
+	fmt.Printf("Backend: User from DB: Email: %s, Role: %s\n", user.Email, user.Role)
+	fmt.Printf("Backend: Number of AuthTokens found for user: %d\n", len(user.AuthTokens))
+
+	// Enhanced debugging of auth tokens
+	for i, token := range user.AuthTokens {
+		fmt.Printf("Backend: Token %d details:\n", i)
+		fmt.Printf("  - ID: %d\n", token.ID)
+		fmt.Printf("  - UserID: %d\n", token.UserID)
+		fmt.Printf("  - ProgramName: '%s'\n", token.ProgramName)
+		fmt.Printf("  - DayNumber: %d\n", token.DayNumber)
+		fmt.Printf("  - IsUsed: %v\n", token.IsUsed)
+		fmt.Printf("  - SessionID: %s\n", token.SessionID)
+	}
+
+	// 2. Perform the authorization check
+	isAuthorized := false
+	authReason := ""
+
+	if user.Role == "admin" {
+		isAuthorized = true
+		authReason = "User is admin"
+		fmt.Println("Backend: User is an admin, granting access.")
+	} else {
+		fmt.Println("Backend: User is not an admin. Checking purchased programs...")
+		for _, token := range user.AuthTokens {
+			fmt.Printf("Backend: Comparing token program '%s' with requested program '%s'\n", token.ProgramName, programName)
+			if token.ProgramName == programName {
+				isAuthorized = true
+				authReason = fmt.Sprintf("Found matching auth token with program: %s", token.ProgramName)
+				fmt.Printf("Backend: MATCH FOUND! Token program '%s' matches requested '%s'\n", token.ProgramName, programName)
+				break
+			}
+		}
+
+		if !isAuthorized {
+			authReason = fmt.Sprintf("No matching program found. User has tokens for: %v", func() []string {
+				programs := make([]string, len(user.AuthTokens))
+				for i, token := range user.AuthTokens {
+					programs[i] = token.ProgramName
+				}
+				return programs
+			}())
+		}
+	}
+
+	fmt.Printf("Backend: Authorization result: %v (Reason: %s)\n", isAuthorized, authReason)
+
+	if !isAuthorized {
+		fmt.Println("Backend: Final authorization check failed.")
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "You are not authorised to view this program.",
+			"debug": authReason, // Remove this in production
+		})
+		return
+	}
+	fmt.Println("Backend: Final authorization check passed.")
+
+	// 3. If authorized, proceed to fetch and return the workout data
 	var program models.WorkoutProgram
 	var dbProgramName string
 
-	// Use a switch statement to map the URL-friendly name to the full database name
 	switch programName {
 	case "beginner-program":
-		dbProgramName = "30-Day Beginner Program"
+		dbProgramName = "beginner-program"
 	case "advanced-program":
-		dbProgramName = "30-Day Advanced Program"
+		dbProgramName = "advanced-program"
 	default:
 		c.JSON(http.StatusNotFound, gin.H{"error": "Program not found"})
 		return
 	}
 
-	// Now, find the program using the exact database name
 	if err := wc.DB.Where("name = ?", dbProgramName).First(&program).Error; err != nil {
+		fmt.Printf("Backend: Program '%s' not found in database: %v\n", dbProgramName, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Program not found"})
 		return
 	}
 
 	var workoutDay models.WorkoutDay
-
-	// Now, use the program ID and day number to find the specific workout day
 	if err := wc.DB.Where("program_id = ? AND day_number = ?", program.ID, dayNumber).
 		Preload("WorkoutBlocks.Exercises.Exercise").
 		First(&workoutDay).Error; err != nil {
+		fmt.Printf("Backend: Workout day %d not found for program %d: %v\n", dayNumber, program.ID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Workout day not found for this program"})
 		return
 	}
+
+	// log.Printf("Authorization check - UserID: %v, ProgramName: %s", userID, programName)
+	// log.Printf("User role: %s, AuthTokens: %d", user.Role, len(user.AuthTokens))
+	// for i, token := range user.AuthTokens {
+	// 	log.Printf("  Token %d: Program=%s, Used=%v", i, token.ProgramName, token.IsUsed)
+	// }
+	// log.Printf("Is authorized: %v", isAuthorized)
 
 	c.JSON(http.StatusOK, workoutDay)
 }
@@ -145,10 +225,6 @@ func (wc *WorkoutController) CompleteExercise(c *gin.Context) {
 		return
 	}
 
-	// This is a simple implementation. A more advanced version would also
-	// update a separate table that tracks completed exercises within a session.
-	// For this example, we'll just log the completion.
-
 	c.JSON(http.StatusOK, gin.H{"message": "Exercise completion recorded"})
 }
 
@@ -182,7 +258,6 @@ func (wc *WorkoutController) CompleteWorkoutDay(c *gin.Context) {
 
 // GetUserProgress retrieves a summary of the user's completed workouts
 func (wc *WorkoutController) GetUserProgress(c *gin.Context) {
-	// Get userID from the context set by the AuthMiddleware
 	userID, _ := c.Get("userID")
 
 	var sessions []models.UserWorkoutSession

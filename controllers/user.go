@@ -110,7 +110,7 @@ func (uc *UserController) LoginUser(ctx *gin.Context) {
 
 	// Find user by email
 	var user models.User
-	if result := uc.DB.Where("email = ?", req.Email).First(&user); result.Error != nil {
+	if result := uc.DB.Preload("AuthTokens").Where("email = ?", req.Email).First(&user); result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 			return
@@ -119,8 +119,8 @@ func (uc *UserController) LoginUser(ctx *gin.Context) {
 		return
 	}
 
-	// log.Printf("Stored Hashed Password for %s: %s", user.Email, user.PasswordHash)
-	// log.Printf("Login attempt plaintext password: %s", req.Password)
+	log.Printf("Stored Hashed Password for %s: %s", user.Email, user.PasswordHash)
+	log.Printf("Login attempt plaintext password: %s", req.Password)
 
 	// Compare provided password with hashed password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
@@ -129,20 +129,53 @@ func (uc *UserController) LoginUser(ctx *gin.Context) {
 	}
 
 	// Generate JWT token
-	token, err := uc.GenerateJWT(user.ID, user.Email, user.Role)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id": user.ID,
+		"email":   user.Email,
+		"role":    user.Role,
+		"exp":     time.Now().Add(time.Hour * 24).Unix(), // 24 hour expiration
+	})
+
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "supersecretjwtkey"
+	}
+
+	tokenString, err := token.SignedString([]byte(jwtSecret))
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
 	}
 
+	log.Printf("Login successful for user: %s", req.Email)
+
+	purchasedPrograms := make(map[string]bool)
+	for _, token := range user.AuthTokens {
+		if token.ProgramName != "" {
+			purchasedPrograms[token.ProgramName] = true
+		}
+	}
+
+	programList := make([]string, 0, len(purchasedPrograms))
+	for program := range purchasedPrograms {
+		programList = append(programList, program)
+	}
+
+	log.Printf("AuthTokens found: %d", len(user.AuthTokens))
+	for _, authToken := range user.AuthTokens {
+		log.Printf("  - Program: %s, Used: %v", authToken.ProgramName, authToken.IsUsed)
+	}
+	log.Printf("Final program list: %v", programList)
+
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "Login successful",
-		"token":   token,
+		"token":   tokenString,
 		"user": models.UserResponse{
 			ID:                 user.ID,
 			Email:              user.Email,
 			Role:               user.Role,
 			MustChangePassword: user.MustChangePassword,
+			PurchasedPrograms:  programList,
 		},
 	})
 }
@@ -156,7 +189,7 @@ func (uc *UserController) GetProfile(ctx *gin.Context) {
 
 	var user models.User
 	// Find user by ID
-	if result := uc.DB.First(&user, userID); result.Error != nil {
+	if result := uc.DB.Preload("AuthTokens").First(&user, userID); result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 			return
@@ -165,18 +198,40 @@ func (uc *UserController) GetProfile(ctx *gin.Context) {
 		return
 	}
 
+	log.Printf("Profile request for user: %v", userID)
+	log.Printf("User AuthTokens: %d", len(user.AuthTokens))
+
+	for i, token := range user.AuthTokens {
+		log.Printf("  Token %d: Program=%s, Used=%v, DayNumber=%d", i, token.ProgramName, token.IsUsed, token.DayNumber)
+	}
+
+	purchasedPrograms := make(map[string]bool)
+	for _, token := range user.AuthTokens {
+		if token.ProgramName != "" {
+			purchasedPrograms[token.ProgramName] = true
+			log.Printf("Added program to purchased list: %s", token.ProgramName)
+		}
+	}
+	programList := make([]string, 0, len(purchasedPrograms))
+	for program := range purchasedPrograms {
+		programList = append(programList, program)
+	}
+
+	log.Printf("Final program list being sent to frontend: %v", programList)
+
 	ctx.JSON(http.StatusOK, models.UserResponse{
 		ID:                 user.ID,
 		Email:              user.Email,
 		Role:               user.Role,
 		MustChangePassword: user.MustChangePassword,
+		PurchasedPrograms:  programList,
 	})
 }
 
 type ChangePasswordRequest struct {
 	OldPassword        string `json:"oldPassword" binding:"required"`
 	NewPassword        string `json:"newPassword" binding:"required"`
-	ConfirmNewPassword string `json:"confirmNewPassword" binding:"required"` // For frontend validation
+	ConfirmNewPassword string `json:"confirmNewPassword" binding:"required"`
 }
 
 func (uc *UserController) ChangePassword(ctx *gin.Context) {
@@ -226,7 +281,6 @@ func (uc *UserController) ChangePassword(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "New password cannot be the same as your old password."})
 		return
 	} else if err != bcrypt.ErrMismatchedHashAndPassword {
-		// This means bcrypt.CompareHashAndPassword returned an error other than mismatch, which is unexpected
 		log.Printf("Bcrypt comparison error during password change: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "An error occurred during password validation."})
 		return
@@ -241,7 +295,7 @@ func (uc *UserController) ChangePassword(ctx *gin.Context) {
 
 	// 7. Update user's password and set MustChangePassword to false
 	user.PasswordHash = string(hashedPassword)
-	user.MustChangePassword = false // Password has been successfully changed
+	user.MustChangePassword = false
 
 	log.Printf("User %d mustChangePassword updated to: %v", user.ID, user.MustChangePassword)
 
@@ -257,7 +311,7 @@ func (uc *UserController) ChangePassword(ctx *gin.Context) {
 func (uc *UserController) GenerateJWT(userID uint, email, role string) (string, error) {
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
-		// log.Println("JWT_SECRET environment variable not set. Using a default (NOT SECURE FOR PRODUCTION!).")
+		log.Println("JWT_SECRET environment variable not set. Using a default (NOT SECURE FOR PRODUCTION!).")
 		jwtSecret = "supersecretjwtkey"
 	}
 
@@ -503,6 +557,8 @@ func (uc *UserController) VerifyWorkoutToken(ctx *gin.Context) {
 		return
 	}
 
+	log.Printf("Token being verified: %s", req.Token)
+
 	var authToken models.AuthToken
 	// Find the token and ensure it has not been used
 	if err := uc.DB.Where("token = ? AND is_used = ?", req.Token, false).First(&authToken).Error; err != nil {
@@ -510,9 +566,12 @@ func (uc *UserController) VerifyWorkoutToken(ctx *gin.Context) {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			return
 		}
+		log.Printf("Database error finding token: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
+
+	log.Printf("Found valid unused token for user ID: %d", authToken.UserID)
 
 	// Mark the token as used to prevent replay attacks
 	authToken.IsUsed = true
@@ -521,7 +580,32 @@ func (uc *UserController) VerifyWorkoutToken(ctx *gin.Context) {
 	// Retrieve the user associated with the token
 	var user models.User
 	if err := uc.DB.First(&user, authToken.UserID).Error; err != nil {
+		log.Printf("Error finding user %d: %v", authToken.UserID, err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "User not found"})
+		return
+	}
+
+	log.Printf("User found: ID=%d, Email=%s, AuthTokens=%d", user.ID, user.Email, len(user.AuthTokens))
+
+	purchasedPrograms := make(map[string]bool)
+	for _, token := range user.AuthTokens {
+		log.Printf("  - AuthToken: Program=%s, Used=%v", token.ProgramName, token.IsUsed)
+		purchasedPrograms[token.ProgramName] = true
+	}
+
+	// Convert map keys to a slice
+	programList := make([]string, 0, len(purchasedPrograms))
+	for program := range purchasedPrograms {
+		programList = append(programList, program)
+	}
+
+	log.Printf("Program list being sent: %v", programList)
+
+	// Generate JWT token
+	tokenString, err := uc.GenerateJWT(user.ID, user.Email, user.Role)
+	if err != nil {
+		log.Printf("Failed to generate JWT for user %d: %v", user.ID, err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
 	}
 
@@ -530,13 +614,10 @@ func (uc *UserController) VerifyWorkoutToken(ctx *gin.Context) {
 		Email:              user.Email,
 		Role:               user.Role,
 		MustChangePassword: user.MustChangePassword,
+		PurchasedPrograms:  programList,
 	}
 
-	tokenString, err := uc.GenerateJWT(user.ID, user.Email, user.Role) // Assuming you have this function
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
-		return
-	}
+	log.Printf("Sending successful response for user %s with programs: %v", user.Email, programList)
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "Token verified, user authenticated",
@@ -597,6 +678,8 @@ func (uc *UserController) SetFirstTimePassword(ctx *gin.Context) {
 		return
 	}
 
+	log.Printf("User before update: MustChangePassword=%v", user.MustChangePassword)
+
 	// 6. Update user's password and set MustChangePassword to false
 	user.PasswordHash = string(hashedPassword)
 	user.MustChangePassword = false
@@ -609,5 +692,34 @@ func (uc *UserController) SetFirstTimePassword(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "Password set successfully! You can now access your workout."})
+	var updatedUser models.User
+	if result := uc.DB.Preload("AuthTokens").First(&updatedUser, user.ID); result.Error != nil {
+		log.Printf("Error preloading user data: %v", result.Error)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve updated user data."})
+		return
+	}
+
+	purchasedPrograms := make(map[string]bool)
+	for _, token := range updatedUser.AuthTokens {
+		purchasedPrograms[token.ProgramName] = true
+	}
+
+	programList := make([]string, 0, len(purchasedPrograms))
+	for program := range purchasedPrograms {
+		programList = append(programList, program)
+	}
+
+	log.Printf("User after update: MustChangePassword=%v", user.MustChangePassword)
+	log.Printf("Program list for updated user: %v", programList)
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "Password set successfully! You can now access your workout.",
+		"user": models.UserResponse{
+			ID:                 user.ID,
+			Email:              user.Email,
+			Role:               user.Role,
+			MustChangePassword: user.MustChangePassword,
+			PurchasedPrograms:  programList,
+		},
+	})
 }
