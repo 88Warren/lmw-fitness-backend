@@ -54,6 +54,7 @@ func MigrateDB() {
 		&models.AuthToken{},
 		&models.Job{},
 		&models.User{},
+		&models.UserProgram{},
 		&models.PasswordResetToken{},
 		&models.WorkoutProgram{},
 		&models.WorkoutDay{},

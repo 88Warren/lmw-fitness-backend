@@ -14,6 +14,7 @@ type User struct {
 	PasswordResetTokens []PasswordResetToken `gorm:"foreignKey:UserID"`
 	MustChangePassword  bool                 `gorm:"default:true"`
 	AuthTokens          []AuthToken          `gorm:"foreignKey:UserID"`
+	UserPrograms        []UserProgram        `gorm:"foreignKey:UserID"`
 }
 
 type UserResponse struct {
@@ -40,4 +41,12 @@ type PasswordResetToken struct {
 	Token     string    `gorm:"unique;not null"`
 	ExpiresAt time.Time `gorm:"not null"`
 	User      User      `gorm:"foreignKey:UserID"`
+}
+
+type UserProgram struct {
+	gorm.Model
+	UserID         uint `gorm:"not null"`
+	ProgramID      uint `gorm:"not null"`
+	User           User
+	WorkoutProgram WorkoutProgram `gorm:"foreignKey:ProgramID"`
 }

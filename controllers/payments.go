@@ -3,6 +3,7 @@ package controllers
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -727,6 +728,9 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 
 	isBeginnerProgramPurchased := false
 	isAdvancedProgramPurchased := false
+	var beginnerProgramID uint
+	var advancedProgramID uint
+
 	for _, priceID := range purchasedPriceIDs {
 		if priceID == pc.BeginnerProgramPriceID {
 			isBeginnerProgramPurchased = true
@@ -735,12 +739,27 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 			isAdvancedProgramPurchased = true
 		}
 	}
-
 	log.Printf("Beginner Program purchased: %v", isBeginnerProgramPurchased)
 	log.Printf("Advanced Program purchased: %v", isAdvancedProgramPurchased)
 
+	// Fetch beginner program
+	var beginnerProgram models.WorkoutProgram
+	if err := pc.DB.Where("name = ?", "beginner-program").First(&beginnerProgram).Error; err == nil {
+		beginnerProgramID = beginnerProgram.ID
+	} else {
+		log.Printf("[WARN] Beginner program not found in DB: %v", err)
+	}
+
+	// Fetch advanced program
+	var advancedProgram models.WorkoutProgram
+	if err := pc.DB.Where("name = ?", "advanced-program").First(&advancedProgram).Error; err == nil {
+		advancedProgramID = advancedProgram.ID
+	} else {
+		log.Printf("[WARN] Advanced program not found in DB: %v", err)
+	}
+
 	// Handle beginner program purchase
-	if isBeginnerProgramPurchased {
+	if isBeginnerProgramPurchased && beginnerProgramID != 0 {
 		log.Printf("Beginner Program purchased. Creating user account and auth token for %s", customerEmail)
 
 		// Step 1: Find or create the user account
@@ -748,9 +767,29 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 		if err != nil {
 			log.Printf("Error finding or creating user: %v", err)
 		} else {
-			// Create a new auth token for this session
-			log.Printf("[DEBUG] User ID for beginner program: %d", userID)
-			log.Printf("Creating new auth token for session %s", checkoutSession.ID)
+			// Step 2: Check if user already has the beginner program
+			var existingUserProgram models.UserProgram
+			err = pc.DB.Where("user_id = ? AND program_id = ?", userID, beginnerProgramID).
+				First(&existingUserProgram).Error
+
+			// If the program doesn't exist for the user, create it
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				userProgram := models.UserProgram{
+					UserID:    userID,
+					ProgramID: beginnerProgramID,
+				}
+				if err := pc.DB.Create(&userProgram).Error; err != nil {
+					log.Printf("Error saving UserProgram for user %d and program %d: %v", userID, beginnerProgramID, err)
+				} else {
+					log.Printf("Successfully linked user %d to program %d in UserPrograms table.", userID, beginnerProgramID)
+				}
+			} else if err != nil {
+				log.Printf("Error checking for existing UserProgram: %v", err)
+			} else {
+				log.Printf("User %d already has access to program %d. Skipping creation.", userID, beginnerProgramID)
+			}
+
+			// Step 3: Create a new auth token for this session
 			const programName = "beginner-program"
 			const dayNumber = 1
 			token, err := pc.CreateAuthToken(userID, programName, dayNumber, checkoutSession.ID)
@@ -758,18 +797,10 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 				log.Printf("Error creating auth token: %v", err)
 			} else {
 				log.Printf("Generated token: %s for session %s", token, checkoutSession.ID)
-				// Link the new token to the session ID
-				// var authToken models.AuthToken
-				// if err := pc.DB.Where("token = ?", token).First(&authToken).Error; err == nil {
-				// 	authToken.SessionID = checkoutSession.ID
-				// 	pc.DB.Save(&authToken)
-				// 	log.Printf("Successfully linked new token to session %s", checkoutSession.ID)
-				// } else {
-				// 	log.Printf("Error finding newly created token to link to session: %v", err)
-				// }
 
 				workoutURL := fmt.Sprintf("%s/workout-auth?token=%s", pc.FrontendURL, token)
 				log.Printf("[DEBUG] Generated workout URL for beginner program: %s", workoutURL)
+
 				templateParams := map[string]interface{}{
 					"FIRSTNAME":    "Client",
 					"WORKOUT_LINK": workoutURL,
@@ -791,13 +822,37 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 	}
 
 	// Handle advanced program purchase
-	if isAdvancedProgramPurchased {
+	if isAdvancedProgramPurchased && advancedProgramID != 0 {
 		log.Printf("Advanced Program purchased. Creating user account and auth token for %s", customerEmail)
+
+		// Step 1: Find or create the user account
 		userID, err := pc.FindOrCreateUser(customerEmail)
 		if err != nil {
-			log.Printf("Error finding or creating user for Advanced Program: %v", err)
+			log.Printf("Error finding or creating user: %v", err)
 		} else {
-			// Create a new auth token for this session
+			// Step 2: Check if user already has the advanced program
+			var existingUserProgram models.UserProgram
+			err = pc.DB.Where("user_id = ? AND program_id = ?", userID, advancedProgramID).
+				First(&existingUserProgram).Error
+
+			// If the program doesn't exist for the user, create it
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				userProgram := models.UserProgram{
+					UserID:    userID,
+					ProgramID: advancedProgramID,
+				}
+				if err := pc.DB.Create(&userProgram).Error; err != nil {
+					log.Printf("Error saving UserProgram for user %d and program %d: %v", userID, advancedProgramID, err)
+				} else {
+					log.Printf("Successfully linked user %d to program %d in UserPrograms table.", userID, advancedProgramID)
+				}
+			} else if err != nil {
+				log.Printf("Error checking for existing UserProgram: %v", err)
+			} else {
+				log.Printf("User %d already has access to program %d. Skipping creation.", userID, advancedProgramID)
+			}
+
+			// Step 3: Create a new auth token for this session
 			const programName = "advanced-program"
 			const dayNumber = 1
 			token, err := pc.CreateAuthToken(userID, programName, dayNumber, checkoutSession.ID)
@@ -805,6 +860,7 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 				log.Printf("Error creating auth token for Advanced Program: %v", err)
 			} else {
 				log.Printf("Generated token: %s for session %s", token, checkoutSession.ID)
+
 				// Link the new token to the session ID
 				var authToken models.AuthToken
 				if err := pc.DB.Where("token = ?", token).First(&authToken).Error; err == nil {
@@ -814,6 +870,8 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 				} else {
 					log.Printf("Error finding newly created token to link to session: %v", err)
 				}
+
+				// Build workout URL + email params
 				workoutURL := fmt.Sprintf("%s/workout-auth?token=%s", pc.FrontendURL, token)
 				templateParams := map[string]interface{}{
 					"FIRSTNAME":    "Client",

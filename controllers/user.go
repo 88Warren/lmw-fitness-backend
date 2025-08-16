@@ -188,8 +188,8 @@ func (uc *UserController) GetProfile(ctx *gin.Context) {
 	}
 
 	var user models.User
-	// Find user by ID
-	if result := uc.DB.Preload("AuthTokens").First(&user, userID); result.Error != nil {
+	// Preload the nested UserPrograms -> WorkoutProgram relationship
+	if result := uc.DB.Preload("UserPrograms.WorkoutProgram").First(&user, userID); result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 			return
@@ -198,18 +198,10 @@ func (uc *UserController) GetProfile(ctx *gin.Context) {
 		return
 	}
 
-	log.Printf("Profile request for user: %v", userID)
-	log.Printf("User AuthTokens: %d", len(user.AuthTokens))
-
-	for i, token := range user.AuthTokens {
-		log.Printf("  Token %d: Program=%s, Used=%v, DayNumber=%d", i, token.ProgramName, token.IsUsed, token.DayNumber)
-	}
-
 	purchasedPrograms := make(map[string]bool)
-	for _, token := range user.AuthTokens {
-		if token.ProgramName != "" {
-			purchasedPrograms[token.ProgramName] = true
-			log.Printf("Added program to purchased list: %s", token.ProgramName)
+	for _, userProgram := range user.UserPrograms {
+		if userProgram.WorkoutProgram.Name != "" {
+			purchasedPrograms[userProgram.WorkoutProgram.Name] = true
 		}
 	}
 	programList := make([]string, 0, len(purchasedPrograms))
@@ -579,21 +571,20 @@ func (uc *UserController) VerifyWorkoutToken(ctx *gin.Context) {
 
 	// Retrieve the user associated with the token
 	var user models.User
-	if err := uc.DB.First(&user, authToken.UserID).Error; err != nil {
+	if err := uc.DB.Preload("UserPrograms.WorkoutProgram").First(&user, authToken.UserID).Error; err != nil {
 		log.Printf("Error finding user %d: %v", authToken.UserID, err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "User not found"})
 		return
 	}
 
-	log.Printf("User found: ID=%d, Email=%s, AuthTokens=%d", user.ID, user.Email, len(user.AuthTokens))
-
+	// Now, build the purchased programs list from the preloaded UserPrograms
 	purchasedPrograms := make(map[string]bool)
-	for _, token := range user.AuthTokens {
-		log.Printf("  - AuthToken: Program=%s, Used=%v", token.ProgramName, token.IsUsed)
-		purchasedPrograms[token.ProgramName] = true
+	for _, userProgram := range user.UserPrograms {
+		if userProgram.WorkoutProgram.Name != "" {
+			purchasedPrograms[userProgram.WorkoutProgram.Name] = true
+		}
 	}
 
-	// Convert map keys to a slice
 	programList := make([]string, 0, len(purchasedPrograms))
 	for program := range purchasedPrograms {
 		programList = append(programList, program)
