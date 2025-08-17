@@ -15,14 +15,16 @@ type User struct {
 	MustChangePassword  bool                 `gorm:"default:true"`
 	AuthTokens          []AuthToken          `gorm:"foreignKey:UserID"`
 	UserPrograms        []UserProgram        `gorm:"foreignKey:UserID"`
+	CompletedDays       map[string]int       `json:"completedDays" gorm:"serializer:json"`
 }
 
 type UserResponse struct {
-	ID                 uint     `json:"id"`
-	Email              string   `json:"email"`
-	Role               string   `json:"role"`
-	MustChangePassword bool     `json:"mustChangePassword"`
-	PurchasedPrograms  []string `json:"purchasedPrograms"`
+	ID                 uint           `json:"id"`
+	Email              string         `json:"email"`
+	Role               string         `json:"role"`
+	MustChangePassword bool           `json:"mustChangePassword"`
+	PurchasedPrograms  []string       `json:"purchasedPrograms"`
+	CompletedDays      map[string]int `json:"completedDays"`
 }
 
 type LoginRequest struct {

@@ -892,4 +892,24 @@ func ExerciseSeed() {
 			log.Printf("Exercise already exists: %s", exercise.Name)
 		}
 	}
+
+	log.Println("Linking exercise modifications...")
+
+	pressUpsID, err := getExerciseIDByName(DB, "Press Ups")
+	if err != nil {
+		log.Printf("Failed to find 'Press Ups' to link modification: %v", err)
+	}
+
+	pressUpsOnKneesID, err := getExerciseIDByName(DB, "Press Ups (on Knees)")
+	if err != nil {
+		log.Printf("Failed to find 'Press Ups on Knees' to link: %v", err)
+	}
+
+	if pressUpsID != 0 && pressUpsOnKneesID != 0 {
+		if err := DB.Model(&models.Exercise{}).Where("id = ?", pressUpsID).Update("modification_id", pressUpsOnKneesID).Error; err != nil {
+			log.Printf("Failed to link Press Ups to modification: %v", err)
+		} else {
+			log.Println("Successfully linked Press Ups to Press Ups on Knees.")
+		}
+	}
 }

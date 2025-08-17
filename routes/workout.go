@@ -15,6 +15,8 @@ func RegisterWorkoutRoutes(router *gin.Engine, wc *controllers.WorkoutController
 		authenticated.GET("/programs/:programID/days/:dayNumber", wc.GetWorkoutDay)
 		authenticated.GET("/:programName/day/:dayNumber", wc.GetWorkoutDayByProgramAndDay)
 
+		authenticated.GET("/:programName/list", wc.GetProgramList)
+
 		authenticated.POST("/start", wc.StartWorkout)
 		authenticated.POST("/complete-exercise", wc.CompleteExercise)
 		authenticated.POST("/complete-day", wc.CompleteWorkoutDay)

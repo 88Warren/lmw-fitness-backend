@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/88warren/lmw-fitness-backend/models"
 	"github.com/gin-gonic/gin"
@@ -20,6 +19,11 @@ type WorkoutController struct {
 // NewWorkoutController creates a new instance of WorkoutController
 func NewWorkoutController(db *gorm.DB) *WorkoutController {
 	return &WorkoutController{DB: db}
+}
+
+type ProgramDetailsResponse struct {
+	Title     string `json:"title"`
+	TotalDays int    `json:"totalDays"`
 }
 
 // GetWorkoutPrograms retrieves a list of all workout programs
@@ -48,6 +52,8 @@ func (wc *WorkoutController) GetWorkoutDay(c *gin.Context) {
 
 	var workoutDay models.WorkoutDay
 	if err := wc.DB.Where("program_id = ? AND day_number = ?", programID, dayNumber).
+		Preload("WorkoutBlocks.Exercises.Exercise.Modification").
+		Preload("WorkoutBlocks.Exercises.Exercise").
 		Preload("WorkoutBlocks.Exercises").
 		First(&workoutDay).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Workout day not found"})
@@ -57,7 +63,6 @@ func (wc *WorkoutController) GetWorkoutDay(c *gin.Context) {
 	c.JSON(http.StatusOK, workoutDay)
 }
 
-// GetWorkoutDayByProgramAndDay retrieves a specific workout day with its blocks and exercises
 func (wc *WorkoutController) GetWorkoutDayByProgramAndDay(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if !exists {
@@ -77,106 +82,55 @@ func (wc *WorkoutController) GetWorkoutDayByProgramAndDay(c *gin.Context) {
 		return
 	}
 
-	// 1. Fetch the user with their AuthTokens preloaded
+	// 1. Fetch the user and PRELOAD the nested WorkoutProgram data
 	var user models.User
-	fmt.Printf("Backend: Attempting to fetch user %v with AuthTokens from DB.\n", userID)
-	if err := wc.DB.Preload("AuthTokens").First(&user, userID).Error; err != nil {
-		fmt.Printf("Backend: Error fetching user: %v\n", err)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+	if err := wc.DB.Preload("UserPrograms.WorkoutProgram").First(&user, userID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user data"})
 		return
 	}
 	fmt.Printf("Backend: User from DB: Email: %s, Role: %s\n", user.Email, user.Role)
-	fmt.Printf("Backend: Number of AuthTokens found for user: %d\n", len(user.AuthTokens))
-
-	// Enhanced debugging of auth tokens
-	for i, token := range user.AuthTokens {
-		fmt.Printf("Backend: Token %d details:\n", i)
-		fmt.Printf("  - ID: %d\n", token.ID)
-		fmt.Printf("  - UserID: %d\n", token.UserID)
-		fmt.Printf("  - ProgramName: '%s'\n", token.ProgramName)
-		fmt.Printf("  - DayNumber: %d\n", token.DayNumber)
-		fmt.Printf("  - IsUsed: %v\n", token.IsUsed)
-		fmt.Printf("  - SessionID: %s\n", token.SessionID)
-	}
+	fmt.Printf("Backend: User purchased programs: %v\n", user.UserPrograms)
 
 	// 2. Perform the authorization check
 	isAuthorized := false
-	authReason := ""
-
 	if user.Role == "admin" {
 		isAuthorized = true
-		authReason = "User is admin"
-		fmt.Println("Backend: User is an admin, granting access.")
 	} else {
-		fmt.Println("Backend: User is not an admin. Checking purchased programs...")
-		for _, token := range user.AuthTokens {
-			fmt.Printf("Backend: Comparing token program '%s' with requested program '%s'\n", token.ProgramName, programName)
-			if token.ProgramName == programName {
+		// Iterate through the PRELOADED UserPrograms and check the WorkoutProgram's Name
+		for _, userProgram := range user.UserPrograms {
+			if userProgram.WorkoutProgram.Name == programName {
 				isAuthorized = true
-				authReason = fmt.Sprintf("Found matching auth token with program: %s", token.ProgramName)
-				fmt.Printf("Backend: MATCH FOUND! Token program '%s' matches requested '%s'\n", token.ProgramName, programName)
 				break
 			}
 		}
-
-		if !isAuthorized {
-			authReason = fmt.Sprintf("No matching program found. User has tokens for: %v", func() []string {
-				programs := make([]string, len(user.AuthTokens))
-				for i, token := range user.AuthTokens {
-					programs[i] = token.ProgramName
-				}
-				return programs
-			}())
-		}
 	}
-
-	fmt.Printf("Backend: Authorization result: %v (Reason: %s)\n", isAuthorized, authReason)
 
 	if !isAuthorized {
-		fmt.Println("Backend: Final authorization check failed.")
-		c.JSON(http.StatusForbidden, gin.H{
-			"error": "You are not authorised to view this program.",
-			"debug": authReason, // Remove this in production
-		})
+		c.JSON(http.StatusForbidden, gin.H{"error": "You are not authorised to view this program."})
 		return
 	}
-	fmt.Println("Backend: Final authorization check passed.")
 
 	// 3. If authorized, proceed to fetch and return the workout data
 	var program models.WorkoutProgram
-	var dbProgramName string
-
-	switch programName {
-	case "beginner-program":
-		dbProgramName = "beginner-program"
-	case "advanced-program":
-		dbProgramName = "advanced-program"
-	default:
-		c.JSON(http.StatusNotFound, gin.H{"error": "Program not found"})
-		return
-	}
-
-	if err := wc.DB.Where("name = ?", dbProgramName).First(&program).Error; err != nil {
-		fmt.Printf("Backend: Program '%s' not found in database: %v\n", dbProgramName, err)
+	if err := wc.DB.Where("name = ?", programName).First(&program).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Program not found"})
 		return
 	}
 
 	var workoutDay models.WorkoutDay
 	if err := wc.DB.Where("program_id = ? AND day_number = ?", program.ID, dayNumber).
+		Preload("WorkoutBlocks").
+		Preload("WorkoutBlocks.Exercises").
 		Preload("WorkoutBlocks.Exercises.Exercise").
+		Preload("WorkoutBlocks.Exercises.Exercise.Modification").
 		First(&workoutDay).Error; err != nil {
-		fmt.Printf("Backend: Workout day %d not found for program %d: %v\n", dayNumber, program.ID, err)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Workout day not found for this program"})
 		return
 	}
-
-	// log.Printf("Authorization check - UserID: %v, ProgramName: %s", userID, programName)
-	// log.Printf("User role: %s, AuthTokens: %d", user.Role, len(user.AuthTokens))
-	// for i, token := range user.AuthTokens {
-	// 	log.Printf("  Token %d: Program=%s, Used=%v", i, token.ProgramName, token.IsUsed)
-	// }
-	// log.Printf("Is authorized: %v", isAuthorized)
 
 	c.JSON(http.StatusOK, workoutDay)
 }
@@ -230,30 +184,52 @@ func (wc *WorkoutController) CompleteExercise(c *gin.Context) {
 
 // CompleteWorkoutDay marks an entire workout session as complete
 func (wc *WorkoutController) CompleteWorkoutDay(c *gin.Context) {
+	// Get user from middleware
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
 	var req struct {
-		SessionID uint `json:"session_id" binding:"required"`
+		ProgramName string `json:"programName" binding:"required"`
+		DayNumber   int    `json:"dayNumber" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	var session models.UserWorkoutSession
-	if err := wc.DB.First(&session, req.SessionID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Session not found"})
+	// Get the user
+	var user models.User
+	if err := wc.DB.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
-	now := time.Now()
-	if err := wc.DB.Model(&session).Updates(models.UserWorkoutSession{
-		Status:        "completed",
-		CompletedDate: &now,
-	}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to complete workout session"})
+	// Update user's completed days for this program
+	// Initialize completedDays if nil
+	if user.CompletedDays == nil {
+		user.CompletedDays = make(map[string]int)
+	}
+
+	// Update the completed day for this program (only if it's higher than current)
+	currentCompleted := user.CompletedDays[req.ProgramName]
+	if req.DayNumber > currentCompleted {
+		user.CompletedDays[req.ProgramName] = req.DayNumber
+	}
+
+	// Save the user with updated completion data
+	if err := wc.DB.Save(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user completion status"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Workout day completed successfully"})
+	c.JSON(http.StatusOK, gin.H{
+		"message":      "Workout day completed successfully",
+		"completedDay": req.DayNumber,
+		"programName":  req.ProgramName,
+	})
 }
 
 // GetUserProgress retrieves a summary of the user's completed workouts
@@ -269,4 +245,31 @@ func (wc *WorkoutController) GetUserProgress(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, sessions)
+}
+
+func (wc *WorkoutController) GetProgramList(c *gin.Context) {
+	programName := c.Param("programID")
+
+	var program models.WorkoutProgram
+	if err := wc.DB.Where("name = ?", programName).First(&program).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Program not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve program details"})
+		return
+	}
+
+	var totalDays int64
+	if err := wc.DB.Model(&models.WorkoutDay{}).Where("program_id = ?", program.ID).Count(&totalDays).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count total days for program"})
+		return
+	}
+
+	response := ProgramDetailsResponse{
+		Title:     program.Name,
+		TotalDays: int(totalDays),
+	}
+
+	c.JSON(http.StatusOK, response)
 }

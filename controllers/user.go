@@ -198,26 +198,37 @@ func (uc *UserController) GetProfile(ctx *gin.Context) {
 		return
 	}
 
+	// Build program list from UserPrograms (relational data)
 	purchasedPrograms := make(map[string]bool)
 	for _, userProgram := range user.UserPrograms {
 		if userProgram.WorkoutProgram.Name != "" {
 			purchasedPrograms[userProgram.WorkoutProgram.Name] = true
 		}
 	}
+
+	// Convert map to slice
 	programList := make([]string, 0, len(purchasedPrograms))
 	for program := range purchasedPrograms {
 		programList = append(programList, program)
 	}
 
+	completedDays := user.CompletedDays
+	if completedDays == nil {
+		completedDays = make(map[string]int)
+	}
+
 	log.Printf("Final program list being sent to frontend: %v", programList)
 
-	ctx.JSON(http.StatusOK, models.UserResponse{
+	userResponse := models.UserResponse{
 		ID:                 user.ID,
 		Email:              user.Email,
 		Role:               user.Role,
 		MustChangePassword: user.MustChangePassword,
-		PurchasedPrograms:  programList,
-	})
+		PurchasedPrograms:  programList, // Use the computed program list
+		CompletedDays:      completedDays,
+	}
+
+	ctx.JSON(http.StatusOK, userResponse)
 }
 
 type ChangePasswordRequest struct {
