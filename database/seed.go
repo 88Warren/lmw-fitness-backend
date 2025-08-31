@@ -9,4 +9,5 @@ func SeedDB(db *gorm.DB) {
 	ProgramSeed()
 	BeginnerWorkoutDaySeed()
 	AdvancedWorkoutDaySeed()
+	BlogSeed(db)
 }

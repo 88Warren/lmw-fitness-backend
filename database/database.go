@@ -53,6 +53,7 @@ func MigrateDB() {
 	err := DB.AutoMigrate(
 		&models.AuthToken{},
 		&models.Job{},
+		&models.Blog{},
 		&models.User{},
 		&models.UserProgram{},
 		&models.PasswordResetToken{},

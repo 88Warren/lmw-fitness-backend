@@ -55,14 +55,16 @@ type WorkoutExercise struct {
 
 type Exercise struct {
 	gorm.Model
-	Name           string    `gorm:"not null" json:"name"`
-	Description    string    `json:"description"`
-	Category       string    `gorm:"not null" json:"category"`
-	VideoID        string    `json:"videoId"`
-	Tips           string    `json:"tips"`
-	Instructions   string    `json:"instructions"`
-	ModificationID *uint     `json:"modificationId"`
-	Modification   *Exercise `gorm:"foreignKey:ModificationID" json:"modification"`
+	Name            string    `gorm:"not null" json:"name"`
+	Description     string    `json:"description"`
+	Category        string    `gorm:"not null" json:"category"`
+	VideoID         string    `json:"videoId"`
+	Tips            string    `json:"tips"`
+	Instructions    string    `json:"instructions"`
+	ModificationID  *uint     `json:"modificationId"`
+	Modification    *Exercise `gorm:"foreignKey:ModificationID" json:"modification"`
+	ModificationID2 *uint
+	Modification2   *Exercise `gorm:"foreignKey:ModificationID2"`
 }
 
 type UserWorkoutSession struct {

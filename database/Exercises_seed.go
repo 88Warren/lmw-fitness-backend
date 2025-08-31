@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/88warren/lmw-fitness-backend/models"
+	"gorm.io/gorm"
 )
 
 func ExerciseSeed() {
@@ -12,30 +13,6 @@ func ExerciseSeed() {
 
 	exercises := []models.Exercise{
 		// Placeholder exercise until have these videos
-		{
-			Name:         "Plank Hold",
-			Description:  "Core strengthening plank",
-			Category:     "core",
-			VideoID:      "your_plank_video_id",
-			Tips:         "Engage core, avoid sagging hips, breathe steadily.",
-			Instructions: "Hold plank position with straight body from head to heels.",
-		},
-		{
-			Name:         "Diamond Press Ups",
-			Description:  "Advanced press up variation",
-			Category:     "upper_body",
-			VideoID:      "your_diamond_pressup_video_id",
-			Tips:         "Form diamond shape with hands, lower chest to hands, keep body straight.",
-			Instructions: "Place hands in diamond shape under chest, perform press ups.",
-		},
-		{
-			Name:         "Wall Sits",
-			Description:  "Isometric leg exercise",
-			Category:     "legs",
-			VideoID:      "your_wall_sit_video_id",
-			Tips:         "Keep your back flat against the wall and your thighs parallel to the ground, as if sitting in a chair.",
-			Instructions: "Slide your back down a wall until your knees are bent at a 90-degree angle. Hold the position.",
-		},
 		// {
 		// 	Name:         "Wall Press Ups",
 		// 	Description:  "A modified press up for beginners, using a wall for support.",
@@ -84,30 +61,6 @@ func ExerciseSeed() {
 		// 	Tips:         "Stay low in the squat position and take small, controlled steps forward and backward or side to side.",
 		// 	Instructions: "Enter a low squat position and take small steps, maintaining the squat depth throughout the movement.",
 		// },
-		{
-			Name:         "Sit Ups",
-			Description:  "Standard abdominal exercise.",
-			Category:     "core",
-			VideoID:      "your_sit_ups_video_id",
-			Tips:         "Keep your neck neutral and use your core to lift your body, not your neck or shoulders.",
-			Instructions: "Lie on your back with knees bent, feet on the floor. Lift your upper body toward your knees.",
-		},
-		{
-			Name:         "Wide Arm Press Ups (on Knees)",
-			Description:  "A modified press up with a wide hand position for a greater chest focus.",
-			Category:     "upper_body",
-			VideoID:      "your_wide_arm_pressups_knees_video_id",
-			Tips:         "Keep your hands wider than your shoulders and lower your chest to the floor. Maintain a straight back.",
-			Instructions: "Place your hands wide on the floor, on your knees, and perform a press up.",
-		},
-		{
-			Name:         "Hollow Hold",
-			Description:  "An advanced isometric core exercise for stability.",
-			Category:     "core",
-			VideoID:      "your_hollow_hold_video_id",
-			Tips:         "Keep your lower back pressed into the floor. The lower your limbs, the more challenging it becomes.",
-			Instructions: "Lie on your back, lift your head, shoulders, and legs off the floor, forming a 'hollow' shape with your body. Hold.",
-		},
 		// {
 		// 	Name:         "Pistol Squat",
 		// 	Description:  "A unilateral leg exercise performed on one leg.",
@@ -124,25 +77,122 @@ func ExerciseSeed() {
 		// 	Tips:         "Land softly with your knees bent. Quickly pedal backward to the starting position.",
 		// 	Instructions: "Perform a broad jump forward, then quickly backpedal to the starting point.",
 		// },
+
+		// Real time videos
+		{
+			Name:         "Mobility",
+			Description:  "Stretch off all muscles",
+			Category:     "full_body",
+			VideoID:      "wAeJIXugbz4",
+			Tips:         "Don't bounce during the stretch, hold for the duration.",
+			Instructions: "Hold each pose for 1 -3 minutes. Help aid recovery and flexibility",
+		},
+		{
+			Name:         "Cool Down",
+			Description:  "Stretch off all muscles",
+			Category:     "full_body",
+			VideoID:      "qB1whwZllzI",
+			Tips:         "Don't bounce during the stretch, hold for the duration.",
+			Instructions: "Hold each pose for 10-15seconds. Remove lactic acid and aid recovery",
+		},
+		{
+			Name:         "Warm Up",
+			Description:  "Dynamic whole body warm up",
+			Category:     "full_body",
+			VideoID:      "R9EPu3nhvhA",
+			Tips:         "Move through each exercise ensuring you have warmed up the whole body",
+			Instructions: "Quick 5 minute blast to get the muscles warm and the heart rate elevated.",
+		},
 		{
 			Name:         "Tricep Dips (with Chair)",
 			Description:  "A bodyweight exercise to target the triceps using a chair.",
 			Category:     "upper_body",
-			VideoID:      "your_tricep_dips_chair_video_id",
+			VideoID:      "idHOHRRAbZ0",
 			Tips:         "Keep your back close to the chair. You can make it easier by keeping your knees bent or harder by extending your legs.",
 			Instructions: "Place your hands on a chair behind you, with your knees bent. Lower your body down and then push back up.",
+		},
+		{
+			Name:         "Plank Hold",
+			Description:  "Isometric core exercise",
+			Category:     "core",
+			VideoID:      "daVdrP15_nI",
+			Tips:         "Engage core, avoid sagging hips and breathe steadily.",
+			Instructions: "Hold plank position with straight body from head to heels.",
+		},
+		{
+			Name:         "Diamond Press Ups",
+			Description:  "Advanced press up variation",
+			Category:     "upper_body",
+			VideoID:      "6_yaoroohq0",
+			Tips:         "Form a diamond shape with hands, lower chest to hands, keep body straight.",
+			Instructions: "Place hands in diamond shape under chest, perform press ups.",
+		},
+		{
+			Name:         "Diamond Press Ups (on Knees)",
+			Description:  "Modified advanced press up variation",
+			Category:     "upper_body",
+			VideoID:      "Ro8aGAyeDRE",
+			Tips:         "Form a diamond shape with hands, lower chest to hands, keep body straight, whilst on knees.",
+			Instructions: "Place hands in diamond shape under chest, perform press ups on knees.",
+		},
+		{
+			Name:         "Wall Sits",
+			Description:  "Isometric leg exercise",
+			Category:     "legs",
+			VideoID:      "EyTkL4gbXKs",
+			Tips:         "Keep your back flat against the wall and your thighs parallel to the ground, as if sitting in a chair.",
+			Instructions: "Slide your back down a wall until your knees are bent at a 90-degree angle. Hold the position.",
+		},
+		{
+			Name:         "Sit Ups",
+			Description:  "Standard abdominal exercise.",
+			Category:     "core",
+			VideoID:      "65IV78T82zA",
+			Tips:         "Keep your neck neutral and use your core to lift your body, not your neck or shoulders.",
+			Instructions: "Lie on your back with knees bent, feet on the floor. Lift your upper body toward your knees.",
+		},
+		{
+			Name:         "Wide Arm Press Ups (on Knees)",
+			Description:  "A modified press up with a wide hand position.",
+			Category:     "upper_body",
+			VideoID:      "J-M8Yo43S0E",
+			Tips:         "Keep your hands wider than your shoulders and lower your chest to the floor. Maintain a straight back.",
+			Instructions: "Place your hands wide on the floor, on your knees and perform a press up.",
+		},
+		{
+			Name:         "Hollow Hold",
+			Description:  "An advanced isometric core exercise for stability.",
+			Category:     "core",
+			VideoID:      "ArggQLa_4tM",
+			Tips:         "Keep your lower back pressed into the floor. The lower your limbs, the more challenging it becomes.",
+			Instructions: "Lie on your back, lift your head, shoulders and legs off the floor, forming a 'hollow' shape with your body. Hold.",
 		},
 		{
 			Name:         "Squat Hold",
 			Description:  "An isometric exercise to build leg and core endurance.",
 			Category:     "legs",
-			VideoID:      "your_squat_hold_video_id",
+			VideoID:      "MiBb0Cy7zIU",
 			Tips:         "Keep your chest up and your back straight, with your weight in your heels. Breathe steadily.",
 			Instructions: "Lower into a squat position and hold it for the designated time.",
 		},
-		// Really time videos
 		{
-			VideoID:      "vj78qLdHF5s",
+			VideoID:      "D_NnuO52648",
+			Name:         "Press Up Twists (on Knees)",
+			Category:     "upper_body",
+			Description:  "A press up variation that adds a torso twist for core engagement.",
+			Tips:         "As you twist, stack your hips and open your chest to the side. Keep your core engaged to prevent wobbling.",
+			Instructions: "Perform a press up on your knees, and at the top, twist your torso to one side, raising one arm to the ceiling.",
+		},
+		{
+			VideoID:      "8r164zBaPyI",
+			Name:         "H.O.G. Press Ups (on Knees)",
+			Category:     "upper_body",
+			Description:  "A press up variation focusing on full range from your knees.",
+			Tips:         "H.O.G. stands for 'Hands Off the Ground.' To help focus on full range.",
+			Instructions: "Perform a press up from your knees and lower all the way to the ground. Make sure your hands leave the ground and push back up.",
+		},
+		{
+			VideoID:      "zkC41M7uv04",
 			Name:         "Squats",
 			Category:     "legs",
 			Description:  "Basic bodyweight squats",
@@ -154,8 +204,8 @@ func ExerciseSeed() {
 			Name:         "Y Shaped Lunges",
 			Category:     "legs",
 			Description:  "A dynamic lunge variation that targets multiple leg and glute muscles.",
-			Tips:         "Move your foot in a 'Y' shape, stepping forward, then to the side, then backward. Maintain control.",
-			Instructions: "Perform a lunge by stepping forward, then lunge to the side, then perform a reverse lunge with the same leg.",
+			Tips:         "Raise your arms above your head, creating a 'Y' shape, stepping forward. Maintain control.",
+			Instructions: "Perform a lunge by stepping forward, with your arms straight up in the air.",
 		},
 		{
 			VideoID:      "YuVKqlYm5Aw",
@@ -163,15 +213,15 @@ func ExerciseSeed() {
 			Category:     "upper_body",
 			Description:  "A press up variation that emphasizes the chest muscles.",
 			Tips:         "Place your hands wider than shoulder-width. Lower your chest to the floor, keeping your elbows out.",
-			Instructions: "Start in a high plank position with hands wide, and perform a press up.",
+			Instructions: "Start in a high plank position with hands wide and perform a press up.",
 		},
 		{
 			VideoID:      "TQaP1Uldqk8",
 			Name:         "Walkaways",
 			Category:     "full_body",
 			Description:  "Dynamic movement that strengthens the core, shoulders, and arms.",
-			Tips:         "Keep your core tight and your hips from sagging. Walk your hands as far out as you can, then walk them back.",
-			Instructions: "From a standing position, bend down and walk your hands out into a plank, then walk your hands back to standing.",
+			Tips:         "Keep your core tight and your hips from sagging. Walk your hands as far out as you can, perform a press up, then walk them back.",
+			Instructions: "From a standing position, bend down and walk your hands out into a plank, perform a press up, then walk your hands back to standing.",
 		},
 		{
 			VideoID:      "YcEIPmeX3Tg",
@@ -179,7 +229,7 @@ func ExerciseSeed() {
 			Category:     "upper_body",
 			Description:  "A press up variation that targets the shoulders.",
 			Tips:         "Form an inverted V-shape with your body. Lower your head toward your hands, keeping your elbows in.",
-			Instructions: "Start in a high plank, lift your hips to form an inverted V, and perform a press up.",
+			Instructions: "Start in a high plank, lift your hips to form an inverted V and perform a press up.",
 		},
 		{
 			VideoID:      "sy13VWfmY3E",
@@ -202,12 +252,12 @@ func ExerciseSeed() {
 			Name:         "Tricep Extensions",
 			Category:     "upper_body",
 			Description:  "An exercise to isolate and strengthen the triceps.",
-			Tips:         "Keep your elbows pointed upward and your upper arms still. Only move your forearms.",
-			Instructions: "Extend your arms fully overhead, then bend your elbows to lower your hands behind your head. Press back up.",
+			Tips:         "Keep your forearms flat on the floor, push through your hands and straighten your arms, squeezing your triceps.",
+			Instructions: "Extend your arms fully, then bend your elbows to lower your forearms. Press back up.",
 		},
 		{
 			VideoID:      "XOwiwAbSJ9U",
-			Name:         "Tricep Dips",
+			Name:         "Tricep Dips (Floor)",
 			Category:     "upper_body",
 			Description:  "A bodyweight exercise for the triceps.",
 			Tips:         "Keep your back straight and close to the bench or floor. Lower until your upper arms are parallel to the floor.",
@@ -215,7 +265,7 @@ func ExerciseSeed() {
 		},
 		{
 			VideoID:      "a9YlX8xWN8A",
-			Name:         "Tricep Dips Right Leg",
+			Name:         "Tricep Dips Right Leg (Floor)",
 			Category:     "upper_body",
 			Description:  "A tricep dip variation with the right leg extended for added challenge.",
 			Tips:         "Keep your right leg straight and focus on keeping your hips high. Maintain a steady tempo.",
@@ -223,7 +273,7 @@ func ExerciseSeed() {
 		},
 		{
 			VideoID:      "aM4BFF7ANRk",
-			Name:         "Tricep Dips Left Leg",
+			Name:         "Tricep Dips Left Leg (Floor)",
 			Category:     "upper_body",
 			Description:  "A tricep dip variation with the left leg extended for added challenge.",
 			Tips:         "Keep your left leg straight and focus on keeping your hips high. Maintain a steady tempo.",
@@ -233,17 +283,17 @@ func ExerciseSeed() {
 			VideoID:      "Ef5nlg3d7Ic",
 			Name:         "Toe Taps",
 			Category:     "core",
-			Description:  "A core exercise that strengthens the lower abs.",
-			Tips:         "Keep your lower back pressed firmly into the floor. Lower your heels slowly and with control.",
-			Instructions: "Lie on your back with your legs raised and knees bent at 90 degrees. Tap your heels on the floor, alternating legs.",
+			Description:  "A core exercise that strengthens the abs.",
+			Tips:         "Keep your lower back pressed firmly into the floor. Keep your legs straight up in the air.",
+			Instructions: "Lie on your back with your legs raised. Reach as far up your leg as possible, ideally your toes. Repeat.",
 		},
 		{
 			VideoID:      "WIm84bfsznc",
 			Name:         "Thrusters",
 			Category:     "full_body",
-			Description:  "A dynamic full-body exercise combining a squat and an overhead press.",
-			Tips:         "Drive through your heels to explode out of the squat. Use the momentum to press your hands overhead.",
-			Instructions: "Start in a squat, and as you stand, press your hands overhead. Return to the starting position in one fluid motion.",
+			Description:  "A dynamic full-body exercise.",
+			Tips:         "Keep your arms strong and steady, move explosively, bring your knees as far towards your chest as your can. Don't sag your back.",
+			Instructions: "Start in a press up position and bring both your feet up towards your chest. Drive through you hands and return your feet to the starting position.",
 		},
 		{
 			VideoID:      "ueqyaNH24Dc",
@@ -251,30 +301,30 @@ func ExerciseSeed() {
 			Category:     "cardio",
 			Description:  "An agility drill involving sprinting and quick changes of direction.",
 			Tips:         "Focus on quick footwork and a low center of gravity when changing directions.",
-			Instructions: "Sprint forward, then shuffle sideways to the left, shuffle back to the right, and then backpedal to the start, forming a 'T' shape.",
+			Instructions: "Sprint forward, then shuffle sideways to the left, and then backpedal to the start, and repeat on the left, forming a 'T' shape.",
 		},
 		{
-			VideoID:      "hqbjqmJ6Ia0",
+			VideoID:      "cU0uPUXoee4",
 			Name:         "Switch Kicks",
 			Category:     "cardio",
 			Description:  "A cardio exercise that involves quick, alternating kicks.",
 			Tips:         "Keep your core engaged to maintain balance. The kicks should be fast and controlled.",
-			Instructions: "Stand with one foot forward, quickly switch your feet, as if doing a continuous series of light kicks.",
+			Instructions: "Sit on the floor with your arms behind you, knees bent, lift your bum off the floor. Perform alternating series of light kicks.",
 		},
 		{
 			VideoID:      "XPzg-PqP2vE",
 			Name:         "Superman",
 			Category:     "core",
-			Description:  "A core exercise that strengthens the back, glutes, and shoulders.",
+			Description:  "A core exercise that strengthens the back, glutes and shoulders.",
 			Tips:         "Focus on lifting with your back and glutes. Keep your head in a neutral position to avoid neck strain.",
-			Instructions: "Lie on your stomach and lift your arms and legs off the floor simultaneously, as if flying like Superman.",
+			Instructions: "Go down onto the floor on all fours, lift an alternating arm and leg straight out from your body off the floor simultaneously, repeat on the other side.",
 		},
 		{
 			VideoID:      "9A9PdNB3N_I",
 			Name:         "Straddle Sit Ups",
 			Category:     "core",
 			Description:  "A sit-up variation with legs spread wide.",
-			Tips:         "Reach for your feet or beyond. Use your core to sit all the way up, not your momentum.",
+			Tips:         "Reach between your legs and beyond. Use your core to sit all the way up, not your momentum.",
 			Instructions: "Lie on your back with your legs in a wide 'V' position. Perform a sit-up and reach forward.",
 		},
 		{
@@ -283,23 +333,23 @@ func ExerciseSeed() {
 			Category:     "cardio",
 			Description:  "Cardio exercise for full-body conditioning.",
 			Tips:         "Land softly with bent knees. Maintain a consistent rhythm throughout the exercise.",
-			Instructions: "Start in a squat position, then jump up, spreading your arms and legs wide like a star. Land softly.",
+			Instructions: "Start in a standing position, then jump up, spreading your arms and legs wide like a star. Land softly.",
 		},
 		{
 			VideoID:      "HUZKz6RlOic",
 			Name:         "Standing Mountain Climbers",
 			Category:     "cardio",
 			Description:  "A high-intensity cardio exercise performed from a standing position.",
-			Tips:         "Drive your knees up toward your chest as quickly as possible. Keep your core tight.",
-			Instructions: "Stand and alternate bringing your knees up toward your chest, as if running in place.",
+			Tips:         "Swapping legs drive your knees up toward your chest as quickly as possible. Keep your core tight.",
+			Instructions: "Stand and alternate bringing your knees up toward your chest, as if running in place, moving opposite arms as you do.",
 		},
 		{
 			VideoID:      "-WyvwUiW9j0",
 			Name:         "Squat Twists",
 			Category:     "full_body",
-			Description:  "A dynamic exercise that combines a squat with a torso twist.",
-			Tips:         "Maintain good squat form, then twist your torso as you stand up. Keep the movement fluid.",
-			Instructions: "Perform a squat, and as you stand, twist your torso and drive one elbow toward the opposite knee.",
+			Description:  "A dynamic exercise that combines a squat with a twist.",
+			Tips:         "Maintain good squat form, then twist your body 180 degrees as you stand up. Keep the movement fluid.",
+			Instructions: "Perform a squat, and as you stand, twist your body 180 degrees, making sure you push off a different leg each twist.",
 		},
 		{
 			VideoID:      "P8QVWzEHbIQ",
@@ -322,7 +372,7 @@ func ExerciseSeed() {
 			Name:         "Sprints",
 			Category:     "cardio",
 			Description:  "High-intensity running in place.",
-			Tips:         "Drive your knees high and pump your arms for maximum intensity.",
+			Tips:         "Move your feet as quickly as possible and pump your arms for maximum intensity.",
 			Instructions: "Run in place as fast as you can for the specified duration.",
 		},
 		{
@@ -330,8 +380,8 @@ func ExerciseSeed() {
 			Name:         "Sprawls",
 			Category:     "cardio",
 			Description:  "A variation of a burpee without the jump or press up.",
-			Tips:         "Move quickly from the standing to the plank position. Keep your core engaged.",
-			Instructions: "Start standing, drop down and kick your feet back into a plank, then jump your feet back in and stand up.",
+			Tips:         "Move quickly from the standing to the lying position. Keep your core engaged.",
+			Instructions: "Start standing, drop down and kick your feet back into a lying position, then jump your feet back in and stand up.",
 		},
 		{
 			VideoID:      "8lRSFSpO6SU",
@@ -347,7 +397,7 @@ func ExerciseSeed() {
 			Category:     "core",
 			Description:  "A sit-up variation that incorporates punching for an added cardio element.",
 			Tips:         "Perform a sit-up and as you reach the top, throw a series of quick jabs forward.",
-			Instructions: "Perform a sit-up, and at the top, punch your hands forward 3-4 times before lowering back down.",
+			Instructions: "Perform a sit-up, and at the top, punch your hands forward before lowering back down.",
 		},
 		{
 			VideoID:      "csddipB7v80",
@@ -355,15 +405,15 @@ func ExerciseSeed() {
 			Category:     "core",
 			Description:  "A core exercise that strengthens the lower abs.",
 			Tips:         "Keep your lower back pressed into the floor. The closer to the floor your legs are, the more challenging it is.",
-			Instructions: "Lie on your back and lift your legs. Scissor them up and down, alternating in a controlled motion.",
+			Instructions: "Lie on your back and lift your legs. Scissor them left and right, alternating in a controlled motion.",
 		},
 		{
 			VideoID:      "q7eSuNJ_H8Y",
 			Name:         "Reverse Plank",
 			Category:     "core",
-			Description:  "An isometric core exercise that targets the back and glutes.",
+			Description:  "An isometric core exercise that targets the core, glutes and shoulders.",
 			Tips:         "Keep your body in a straight line from head to heels. Squeeze your glutes to maintain the position.",
-			Instructions: "Sit on the floor, place your hands behind you, and lift your hips until your body forms a straight line. Hold.",
+			Instructions: "From a high plank position, alternate either side into a reverse plank, lift your hips until your body forms a straight line.",
 		},
 		{
 			VideoID:      "erKTtXZCcfA",
@@ -441,9 +491,9 @@ func ExerciseSeed() {
 			VideoID:      "LO6ZguR9xec",
 			Name:         "Pike Jumps",
 			Category:     "core",
-			Description:  "A dynamic plank variation that raises the heart rate.",
-			Tips:         "Jump your feet in and out with quick, controlled movements. Keep your core tight.",
-			Instructions: "From a high plank, jump both feet out wide and then jump them back in.",
+			Description:  "A dynamic jump that raises the heart rate.",
+			Tips:         "Jump your legs and feet out with quick, controlled movement.",
+			Instructions: "From a standing position, jump both legs out and try to touch your toes.",
 		},
 		{
 			VideoID:      "h8tmGnVXqQY",
@@ -451,7 +501,7 @@ func ExerciseSeed() {
 			Category:     "cardio",
 			Description:  "A cardio exercise that involves quick, overhead punching.",
 			Tips:         "Keep your arms up and punch with quick, powerful movements.",
-			Instructions: "Stand with your feet shoulder-width apart and punch your hands overhead quickly and continuously.",
+			Instructions: "Stand with your feet shoulder-width apart and punch your hands overhead quickly and continuously. Whilst running on the spot",
 		},
 		{
 			VideoID:      "mwLO_qIuqa8",
@@ -466,16 +516,16 @@ func ExerciseSeed() {
 			Name:         "Oblique Press Ups",
 			Category:     "upper_body",
 			Description:  "A press up variation that targets the obliques.",
-			Tips:         "Perform a press up, and as you push up, bring one knee toward the opposite elbow.",
+			Tips:         "Perform a press up, and as you push up, bring one knee toward the opposite elbow. Maintain a straight back and engage your core",
 			Instructions: "Perform a press up, and at the top, bring one knee to the opposite elbow. Alternate sides.",
 		},
 		{
 			VideoID:      "5jwecucBurE",
 			Name:         "Oblique Plank",
 			Category:     "core",
-			Description:  "A core exercise that targets the obliques and transverse abdominis.",
-			Tips:         "Focus on lifting with your core, not your neck. Keep your hips stacked and your body in a straight line.",
-			Instructions: "In a side plank position, lower your hips toward the floor and then lift them back up.",
+			Description:  "A core exercise that targets the obliques and abdominals.",
+			Tips:         "Focus on lifting with your core. Keep your hips and body in a straight line.",
+			Instructions: "In a high plank position, lift your leg out to the side, bringing your knee towards your elbow. Alternate sides",
 		},
 		{
 			VideoID:      "sEm2wiQbRjE",
@@ -483,7 +533,7 @@ func ExerciseSeed() {
 			Category:     "cardio",
 			Description:  "A plyometric exercise for the core and legs.",
 			Tips:         "Keep your feet together and hop side to side with a small, controlled motion.",
-			Instructions: "Stand with feet together and hop from side to side.",
+			Instructions: "In a high plank position, with feet together and hop from side to side. Returning to the start each time",
 		},
 		{
 			VideoID:      "waIht9sWJZU",
@@ -491,7 +541,7 @@ func ExerciseSeed() {
 			Category:     "upper_body",
 			Description:  "A dynamic press up variation where you move from side to side.",
 			Tips:         "As you move, keep your core tight to prevent your hips from rocking. Maintain a steady pace.",
-			Instructions: "Perform a press up, then move one hand to the side and perform another press up. Continue moving from side to side.",
+			Instructions: "Perform a press up, then move to the side and perform another press up. Continue moving from side to side.",
 		},
 		{
 			VideoID:      "_OsY3ruw3lU",
@@ -547,7 +597,7 @@ func ExerciseSeed() {
 			Category:     "core",
 			Description:  "A core exercise that targets the lower abs.",
 			Tips:         "Keep your core tight and your back flat on the floor. Bring your knees to your chest with a controlled motion.",
-			Instructions: "Lie on your back, lift your head and shoulders, and bring your knees to your chest.",
+			Instructions: "Lie on your back, lift your head and shoulders slightly and bring your knees to your chest.",
 		},
 		{
 			VideoID:      "FYgLvCSy_Yo",
@@ -586,16 +636,16 @@ func ExerciseSeed() {
 			Name:         "Inch Worm",
 			Category:     "full_body",
 			Description:  "A dynamic stretching and core strengthening exercise.",
-			Tips:         "Keep your legs as straight as possible. Walk your hands as far out as you can, then walk them back in.",
-			Instructions: "Start standing, bend down and walk your hands out into a plank, then walk your feet back toward your hands.",
+			Tips:         "Keep your legs as straight as possible. Walk your hands as far out as you can, then walk your legs to meet them.",
+			Instructions: "Start standing, bend down and walk your hands out into a plank, then walk your feet toward your hands.",
 		},
 		{
 			VideoID:      "nz4-POvt1IU",
 			Name:         "H.O.G. Press Ups",
 			Category:     "upper_body",
-			Description:  "A challenging press up variation with a wider hand placement.",
-			Tips:         "H.O.G. stands for 'Hands Outward, Ghetto.' Keep your core tight and your body in a straight line.",
-			Instructions: "Place your hands very wide, outside your shoulders, and perform a press up.",
+			Description:  "A press up variation focusing on full range.",
+			Tips:         "H.O.G. stands for 'Hands Off the Ground.' To help focus on full range.",
+			Instructions: "Perform a press up and lower all the way to the ground. Make sure your hands leave the ground and push back up.",
 		},
 		{
 			VideoID:      "gtquD3Dxr-8",
@@ -642,7 +692,7 @@ func ExerciseSeed() {
 			Name:         "Glute Bridges",
 			Category:     "legs",
 			Description:  "Glute strengthening exercise",
-			Tips:         "Squeeze glutes at the top, keep feet flat on ground.",
+			Tips:         "Squeeze glutes at the top, hold for a few seconds, keep feet flat on ground.",
 			Instructions: "Lie on back, bend knees, lift hips toward ceiling.",
 		},
 		{
@@ -667,7 +717,7 @@ func ExerciseSeed() {
 			Category:     "cardio",
 			Description:  "A high-intensity version of a star jump for maximum cardio.",
 			Tips:         "Jump as high as you can and spread your limbs as wide as possible for a full extension.",
-			Instructions: "Perform a star jump with maximum effort and height on each repetition.",
+			Instructions: "From a squat position, hands down low, perform a star jump with maximum effort and height on each repetition.",
 		},
 		{
 			VideoID:      "f-VwwnlzVnM",
@@ -675,7 +725,7 @@ func ExerciseSeed() {
 			Category:     "cardio",
 			Description:  "A cardio and core exercise that brings opposite elbow to knee.",
 			Tips:         "Keep a quick tempo. Twist your torso to engage your obliques.",
-			Instructions: "Stand with hands behind your head. Lift one knee and twist your torso to bring the opposite elbow to the knee. Alternate sides.",
+			Instructions: "Staay light on your feet. Lift one knee and twist your torso to bring the opposite elbow to the knee. Alternate sides.",
 		},
 		{
 			VideoID:      "dxtScFd1mhM",
@@ -699,15 +749,15 @@ func ExerciseSeed() {
 			Category:     "core",
 			Description:  "A sit-up variation with feet touching in a diamond shape.",
 			Tips:         "The diamond shape of your legs allows for greater core activation. Reach your hands past your feet.",
-			Instructions: "Lie on your back with the soles of your feet together. Perform a sit-up and reach toward or past your feet.",
+			Instructions: "Lie on your back with the soles of your feet together. Perform a sit-up and reach toward or past your feet and head.",
 		},
 		{
 			VideoID:      "cLqsHwtlNWI",
 			Name:         "Crunches",
 			Category:     "core",
 			Description:  "A basic abdominal exercise.",
-			Tips:         "Keep your lower back on the floor. Focus on using your core to lift your shoulders off the ground.",
-			Instructions: "Lie on your back with knees bent. Lift your shoulders toward your knees, engaging your core.",
+			Tips:         "Keep your lower back on the floor. Focus on using your core to lift your shoulders off the ground. Try and not let your feet drop",
+			Instructions: "Lie on your back with legs straight. Lift your shoulders and yours knees to meet, engaging your core.",
 		},
 		{
 			VideoID:      "boRcEnMEj5E",
@@ -721,15 +771,15 @@ func ExerciseSeed() {
 			VideoID:      "PYoNax1_w74",
 			Name:         "Cross Jacks",
 			Category:     "cardio",
-			Description:  "A cardio exercise similar to jumping jacks, but crossing arms and legs.",
+			Description:  "A cardio exercise similar to jumping jacks, but crossing legs.",
 			Tips:         "Coordinate your arm and leg movements. Land softly and with control.",
-			Instructions: "Jump, crossing one leg over the other and one arm over the other, then jump back to the start.",
+			Instructions: "Jump, crossing one leg over the other and one arm over the head, then jump back to the start.",
 		},
 		{
 			VideoID:      "YstSKtOL4oE",
 			Name:         "Crab Walks",
 			Category:     "full_body",
-			Description:  "A full-body exercise that strengthens the shoulders, triceps, and core.",
+			Description:  "A full-body exercise that strengthens the shoulders, triceps and core.",
 			Tips:         "Keep your hips off the floor. Walk with opposite hand and foot simultaneously.",
 			Instructions: "Start in a 'crab' position, then walk forward or backward, alternating hands and feet.",
 		},
@@ -771,7 +821,7 @@ func ExerciseSeed() {
 			Category:     "full_body",
 			Description:  "Full body conditioning exercise",
 			Tips:         "Explosive movement, full range of motion, maintain form.",
-			Instructions: "Start standing, drop to plank, do press up, jump feet forward, jump up.",
+			Instructions: "Start standing, drop to the floor, jump feet forward, jump up.",
 		},
 		{
 			VideoID:      "F9gX8P8lCc0",
@@ -802,24 +852,24 @@ func ExerciseSeed() {
 			Name:         "Burpee Sprints",
 			Category:     "cardio",
 			Description:  "A burpee variation that incorporates a sprint.",
-			Tips:         "Perform a burpee, then sprint for a few meters before repeating.",
-			Instructions: "Perform a burpee, then sprint forward. Walk back to the starting point and repeat.",
+			Tips:         "Perform a burpee, then sprint on the spot 3-4 steps before repeating.",
+			Instructions: "Perform a burpee, then sprint on the spot, moving your feet as quickly as possible and repeat.",
 		},
 		{
 			VideoID:      "g9AtnGRgCbI",
 			Name:         "Box Jumps",
 			Category:     "cardio",
 			Description:  "A plyometric exercise for power and agility.",
-			Tips:         "Use your arms to help propel yourself onto the box. Land softly with both feet.",
-			Instructions: "Jump onto a box or stable elevated surface, then step or jump back down.",
+			Tips:         "Use your arms to help propel yourself around the floor in a 'box'. If limited space keep the box small.",
+			Instructions: "Jump forward, left, back and right. Land softly with both feet.",
 		},
 		{
 			VideoID:      "KkumMUmVlzs",
 			Name:         "Bicycles",
 			Category:     "core",
 			Description:  "A core exercise that targets the obliques.",
-			Tips:         "Move your legs in a pedaling motion. Bring your elbow to the opposite knee with a twist.",
-			Instructions: "Lie on your back, bring your knees up, and twist your torso to bring your elbow to the opposite knee. Alternate sides.",
+			Tips:         "Move your legs in a pedaling motion. Bring your chest up to meet your knees.",
+			Instructions: "Lie on your back, pedal your legs and bring your torso to meet your knees.",
 		},
 		{
 			VideoID:      "_0mTRFFa_y0",
@@ -833,15 +883,15 @@ func ExerciseSeed() {
 			VideoID:      "76DMzTWs5WQ",
 			Name:         "Belt Kicks",
 			Category:     "cardio",
-			Description:  "A cardio exercise that involves kicking with a twisting motion.",
-			Tips:         "Kick with control. Engage your core to help with the twist and balance.",
-			Instructions: "Stand and perform quick kicks to the side, twisting your hips as you kick.",
+			Description:  "A cardio exercise that involves a kicking motion.",
+			Tips:         "Kick with control. Engage your core to help with the balance.",
+			Instructions: "Stand and perform quick kicks out to the front.",
 		},
 		{
 			VideoID:      "JLZzXq8cKJM",
 			Name:         "Bearcrawls",
 			Category:     "full_body",
-			Description:  "A full-body exercise that strengthens the core, shoulders, and legs.",
+			Description:  "A full-body exercise that strengthens the core, shoulders and legs.",
 			Tips:         "Keep your knees low and your back flat. Move with opposite hand and foot simultaneously.",
 			Instructions: "Start on your hands and knees. Lift your knees off the floor and crawl forward and backward.",
 		},
@@ -849,9 +899,9 @@ func ExerciseSeed() {
 			VideoID:      "nzOLTP3Kw9c",
 			Name:         "Back Drills",
 			Category:     "full_body",
-			Description:  "A dynamic exercise that strengthens the back and core.",
-			Tips:         "Focus on control and stability. Start with a simple back roll and progress from there.",
-			Instructions: "Lie on your back and perform a series of back rolls, bringing your knees to your chest.",
+			Description:  "A dynamic exercise that strengthens the body.",
+			Tips:         "Focus on control and stability.",
+			Instructions: "Lie on your back and spread your arms out and get back up any way you can.",
 		},
 		{
 			VideoID:      "QgHkhdP8CQ8",
@@ -875,7 +925,7 @@ func ExerciseSeed() {
 			Category:     "core",
 			Description:  "A core exercise for the obliques.",
 			Tips:         "Keep your back straight and your core engaged. Twist your torso from side to side.",
-			Instructions: "Sit with your knees bent and lean back slightly. Twist your torso from side to side.",
+			Instructions: "Sit with your knees bent and lean back slightly. Twist your torso as you sit up to one side and repeat on the other side.",
 		},
 	}
 
@@ -895,21 +945,52 @@ func ExerciseSeed() {
 
 	log.Println("Linking exercise modifications...")
 
-	pressUpsID, err := getExerciseIDByName(DB, "Press Ups")
-	if err != nil {
-		log.Printf("Failed to find 'Press Ups' to link modification: %v", err)
+	modifications := map[string]string{
+		"Press Ups":                "Press Ups (on Knees)",
+		"Burpees":                  "Burpees (modified)",
+		"Burpee Tucks":             "Burpees (modified)",
+		"Wide Arm Press Ups":       "Wide Arm Press Ups (on Knees)",
+		"Tricep Dips (with Chair)": "Tricep Dips (Floor)",
+		"Diamond Press Ups":        "Diamond Press Ups (on Knees)",
+		"Tuck Jumps":               "Squat Jumps",
+		"Explosive Starjumps":      "Starjumps",
+		"Press Up Twists":          "Press Up Twists (on Knees)",
+		"Pike Jumps":               "Tuck Jumps",
+		"Jump Lunge":               "Lunges",
+		"H.O.G. Press Ups":         "H.O.G. Press Ups (on Knees)",
+		"Bicycles":                 "Bicycle Legs",
+		"Bicycle Legs":             "Crunches",
 	}
 
-	pressUpsOnKneesID, err := getExerciseIDByName(DB, "Press Ups (on Knees)")
+	for original, modified := range modifications {
+		linkExerciseToModification(DB, original, modified, 1)
+	}
+	linkExerciseToModification(DB, "Tricep Dips (Floor)", "Diamond Press Ups", 2)
+}
+
+func linkExerciseToModification(db *gorm.DB, originalName, modifiedName string, level int) {
+	originalID, err := getExerciseIDByName(db, originalName)
 	if err != nil {
-		log.Printf("Failed to find 'Press Ups on Knees' to link: %v", err)
+		log.Printf("Failed to find '%s' to link modification: %v", originalName, err)
+		return
 	}
 
-	if pressUpsID != 0 && pressUpsOnKneesID != 0 {
-		if err := DB.Model(&models.Exercise{}).Where("id = ?", pressUpsID).Update("modification_id", pressUpsOnKneesID).Error; err != nil {
-			log.Printf("Failed to link Press Ups to modification: %v", err)
+	modifiedID, err := getExerciseIDByName(db, modifiedName)
+	if err != nil {
+		log.Printf("Failed to find '%s' to link: %v", modifiedName, err)
+		return
+	}
+
+	if originalID != 0 && modifiedID != 0 {
+		updateColumn := "modification_id"
+		if level == 2 {
+			updateColumn = "modification_id2"
+		}
+
+		if err := db.Model(&models.Exercise{}).Where("id = ?", originalID).Update(updateColumn, modifiedID).Error; err != nil {
+			log.Printf("Failed to link '%s' to modification at level %d: %v", originalName, level, err)
 		} else {
-			log.Println("Successfully linked Press Ups to Press Ups on Knees.")
+			log.Printf("Successfully linked '%s' to '%s' at level %d.", originalName, modifiedName, level)
 		}
 	}
 }
