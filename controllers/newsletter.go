@@ -120,7 +120,7 @@ func (nc *NewsletterController) Subscribe(ctx *gin.Context) {
 	if err != nil {
 		log.Printf("Error reading response body: %v", err)
 	} else {
-		log.Printf("Brevo API Response (Status: %d): %s", resp.StatusCode, string(bodyBytes))
+		// log.Printf("Brevo API Response (Status: %d): %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	resp.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
@@ -134,7 +134,7 @@ func (nc *NewsletterController) Subscribe(ctx *gin.Context) {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to subscribe. Unknown error from service."})
 			return
 		}
-		log.Printf("Brevo API error (Status: %d, Code: %s): %s", resp.StatusCode, errorBody.Code, errorBody.Message)
+		// log.Printf("Brevo API error (Status: %d, Code: %s): %s", resp.StatusCode, errorBody.Code, errorBody.Message)
 
 		if errorBody.Code == "duplicate_parameter" || errorBody.Code == "already_exist" {
 			ctx.JSON(http.StatusOK, gin.H{"message": "You are already subscribed to our newsletter! Please check your inbox for confirmation."})

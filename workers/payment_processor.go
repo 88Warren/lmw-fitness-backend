@@ -33,8 +33,8 @@ func StartPaymentWorker(db *gorm.DB, pc PaymentProcessor) {
 
 	SetGlobalProcessor(processor)
 
-	log.Printf("=== PAYMENT WORKER STARTED ===")
-	log.Printf("Worker is ready to process jobs immediately")
+	// log.Printf("=== PAYMENT WORKER STARTED ===")
+	// log.Printf("Worker is ready to process jobs immediately")
 
 	processor.processPendingJobs()
 
@@ -50,15 +50,15 @@ func (jp *JobProcessor) workerLoop() {
 	for {
 		select {
 		case <-jp.jobChan:
-			log.Printf("=== Processing jobs triggered by event ===")
+			// log.Printf("=== Processing jobs triggered by event ===")
 			jp.processPendingJobs()
 
 		case <-fallbackTicker.C:
-			log.Printf("=== Fallback check for missed jobs ===")
+			// log.Printf("=== Fallback check for missed jobs ===")
 			jp.processPendingJobs()
 
 		case <-jp.stopChan:
-			log.Printf("=== PAYMENT WORKER STOPPED ===")
+			// log.Printf("=== PAYMENT WORKER STOPPED ===")
 			return
 		}
 	}
@@ -67,9 +67,9 @@ func (jp *JobProcessor) workerLoop() {
 func (jp *JobProcessor) TriggerJobProcessing() {
 	select {
 	case jp.jobChan <- struct{}{}:
-		log.Printf("Job processing triggered")
+		// log.Printf("Job processing triggered")
 	default:
-		log.Printf("Job processing channel full, will process on next fallback cycle")
+		// log.Printf("Job processing channel full, will process on next fallback cycle")
 	}
 }
 
@@ -86,26 +86,26 @@ func (jp *JobProcessor) processPendingJobs() {
 		return
 	}
 
-	var allJobs []models.Job
-	if allResult := jp.db.Find(&allJobs); allResult.Error == nil {
-		log.Printf("Total jobs in database: %d", len(allJobs))
-		for _, job := range allJobs {
-			log.Printf("Job: ID=%d, Session=%s, Email=%s, Status=%s, Attempts=%d",
-				job.ID, job.SessionID, job.CustomerEmail, job.Status, job.Attempts)
-		}
-	}
+	// var allJobs []models.Job
+	// if allResult := jp.db.Find(&allJobs); allResult.Error == nil {
+	// 	log.Printf("Total jobs in database: %d", len(allJobs))
+	// 	for _, job := range allJobs {
+	// 		log.Printf("Job: ID=%d, Session=%s, Email=%s, Status=%s, Attempts=%d",
+	// 			job.ID, job.SessionID, job.CustomerEmail, job.Status, job.Attempts)
+	// 	}
+	// }
 
 	if len(jobs) == 0 {
-		log.Printf("No pending jobs found")
+		// log.Printf("No pending jobs found")
 		return
 	}
 
-	log.Printf("Found %d pending jobs", len(jobs))
+	// log.Printf("Found %d pending jobs", len(jobs))
 
 	for _, job := range jobs {
-		log.Printf("=== Processing job for session: %s ===", job.SessionID)
-		log.Printf("Job details: ID=%d, Email=%s, Status=%s, Attempts=%d",
-			job.ID, job.CustomerEmail, job.Status, job.Attempts)
+		// log.Printf("=== Processing job for session: %s ===", job.SessionID)
+		// log.Printf("Job details: ID=%d, Email=%s, Status=%s, Attempts=%d",
+		// 	job.ID, job.CustomerEmail, job.Status, job.Attempts)
 
 		job.Status = "processing"
 		if err := jp.db.Save(&job).Error; err != nil {
@@ -126,7 +126,7 @@ func (jp *JobProcessor) processPendingJobs() {
 			if err := jp.db.Save(&job).Error; err != nil {
 				log.Printf("Error updating completed job: %v", err)
 			} else {
-				log.Printf("Job for session %s completed successfully.", job.SessionID)
+				// log.Printf("Job for session %s completed successfully.", job.SessionID)
 			}
 		}
 	}

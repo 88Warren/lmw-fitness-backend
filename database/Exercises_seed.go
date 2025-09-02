@@ -88,20 +88,49 @@ func ExerciseSeed() {
 			Instructions: "Hold each pose for 1 -3 minutes. Help aid recovery and flexibility",
 		},
 		{
-			Name:         "Cool Down",
-			Description:  "Stretch off all muscles",
-			Category:     "full_body",
-			VideoID:      "qB1whwZllzI",
-			Tips:         "Don't bounce during the stretch, hold for the duration.",
-			Instructions: "Hold each pose for 10-15seconds. Remove lactic acid and aid recovery",
+			Name: "Cool Down",
+			Description: `A cool-down is just as important as a warm-up. 
+							It helps your body gradually return to its pre-exercise state, preventing blood from pooling in the limbs and reducing muscle soreness. 
+							This routine focuses on static stretches to improve flexibility and aid in recovery.
+							- Tricep Stretch (Left and Right)
+							- Shoulder Stretch (Left and Right)
+							- Side Bend (Left and Right)
+							- Quad Stretch (Left and Right)
+							- Hamstring Stretch (Left and Right)
+							- Glute Stretch (Left and Right)`,
+			Category: "full_body",
+			VideoID:  "qB1whwZllzI",
+			Tips: `Hold the Stretch: Don't bounce. 
+							Use your breath to help you relax into the stretch. Exhale as you increase the stretch. 
+							If you feel a sharp or stabbing pain, ease off the stretch immediately.`,
+			Instructions: `Hold each stretch for 30 seconds. 
+							Do not bounce or make sudden movements. 
+							Breathe deeply and focus on relaxing into the stretch.`,
 		},
 		{
-			Name:         "Warm Up",
-			Description:  "Dynamic whole body warm up",
-			Category:     "full_body",
-			VideoID:      "R9EPu3nhvhA",
-			Tips:         "Move through each exercise ensuring you have warmed up the whole body",
-			Instructions: "Quick 5 minute blast to get the muscles warm and the heart rate elevated.",
+			Name: "Warm Up",
+			Description: `A proper warm-up is crucial for any physical activity. 
+							It prepares your muscles, increases your heart rate, and improves blood flow to your limbs, which helps to prevent injuries and optimize performance. 
+							This routine focuses on dynamic movements that activate your entire body.
+							- Jogging on the spot
+							- Arm Circles (Forward and Backward)
+							- Leg Swings (Side to Side and Forward and Back)
+							- Sit-ups
+							- High Plank Shoulder Taps
+							- Calf Jumps
+							- Squats
+							- Star Jumps
+							- Belt Kicks
+							- Burpees`,
+			Category: "full_body",
+			VideoID:  "R9EPu3nhvhA",
+			Tips: `Listen to Your Body: If a movement feels painful, stop.
+							The goal is to prepare your muscles and joints for exercise, so prioritise proper form over speed.
+							Feel free to adjust the duration or number of repetitions based on your fitness level and the intensity of your main workout. You can also add or remove exercises to suit your needs.
+							Remember to breathe! `,
+			Instructions: `Perform each exercise for 30 seconds. 
+							Move smoothly from one exercise to the next without stopping. 
+							Focus on controlled movements, not speed.`,
 		},
 		{
 			Name:         "Tricep Dips (with Chair)",

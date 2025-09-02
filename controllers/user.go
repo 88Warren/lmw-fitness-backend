@@ -119,8 +119,8 @@ func (uc *UserController) LoginUser(ctx *gin.Context) {
 		return
 	}
 
-	log.Printf("Stored Hashed Password for %s: %s", user.Email, user.PasswordHash)
-	log.Printf("Login attempt plaintext password: %s", req.Password)
+	// log.Printf("Stored Hashed Password for %s: %s", user.Email, user.PasswordHash)
+	// log.Printf("Login attempt plaintext password: %s", req.Password)
 
 	// Compare provided password with hashed password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
@@ -147,7 +147,7 @@ func (uc *UserController) LoginUser(ctx *gin.Context) {
 		return
 	}
 
-	log.Printf("Login successful for user: %s", req.Email)
+	// log.Printf("Login successful for user: %s", req.Email)
 
 	purchasedPrograms := make(map[string]bool)
 	for _, token := range user.AuthTokens {
@@ -161,11 +161,11 @@ func (uc *UserController) LoginUser(ctx *gin.Context) {
 		programList = append(programList, program)
 	}
 
-	log.Printf("AuthTokens found: %d", len(user.AuthTokens))
-	for _, authToken := range user.AuthTokens {
-		log.Printf("  - Program: %s, Used: %v", authToken.ProgramName, authToken.IsUsed)
-	}
-	log.Printf("Final program list: %v", programList)
+	// log.Printf("AuthTokens found: %d", len(user.AuthTokens))
+	// for _, authToken := range user.AuthTokens {
+	// 	log.Printf("  - Program: %s, Used: %v", authToken.ProgramName, authToken.IsUsed)
+	// }
+	// log.Printf("Final program list: %v", programList)
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "Login successful",
@@ -217,7 +217,7 @@ func (uc *UserController) GetProfile(ctx *gin.Context) {
 		completedDays = make(map[string]int)
 	}
 
-	log.Printf("Final program list being sent to frontend: %v", programList)
+	// log.Printf("Final program list being sent to frontend: %v", programList)
 
 	userResponse := models.UserResponse{
 		ID:                 user.ID,
@@ -300,7 +300,7 @@ func (uc *UserController) ChangePassword(ctx *gin.Context) {
 	user.PasswordHash = string(hashedPassword)
 	user.MustChangePassword = false
 
-	log.Printf("User %d mustChangePassword updated to: %v", user.ID, user.MustChangePassword)
+	// log.Printf("User %d mustChangePassword updated to: %v", user.ID, user.MustChangePassword)
 
 	if result := uc.DB.Save(&user); result.Error != nil {
 		log.Printf("Error updating user password: %v", result.Error)
@@ -560,7 +560,7 @@ func (uc *UserController) VerifyWorkoutToken(ctx *gin.Context) {
 		return
 	}
 
-	log.Printf("Token being verified: %s", req.Token)
+	// log.Printf("Token being verified: %s", req.Token)
 
 	var authToken models.AuthToken
 	// Find the token and ensure it has not been used
@@ -574,7 +574,7 @@ func (uc *UserController) VerifyWorkoutToken(ctx *gin.Context) {
 		return
 	}
 
-	log.Printf("Found valid unused token for user ID: %d", authToken.UserID)
+	// log.Printf("Found valid unused token for user ID: %d", authToken.UserID)
 
 	// Mark the token as used to prevent replay attacks
 	authToken.IsUsed = true
@@ -601,7 +601,7 @@ func (uc *UserController) VerifyWorkoutToken(ctx *gin.Context) {
 		programList = append(programList, program)
 	}
 
-	log.Printf("Program list being sent: %v", programList)
+	// log.Printf("Program list being sent: %v", programList)
 
 	// Generate JWT token
 	tokenString, err := uc.GenerateJWT(user.ID, user.Email, user.Role)
@@ -619,7 +619,7 @@ func (uc *UserController) VerifyWorkoutToken(ctx *gin.Context) {
 		PurchasedPrograms:  programList,
 	}
 
-	log.Printf("Sending successful response for user %s with programs: %v", user.Email, programList)
+	// log.Printf("Sending successful response for user %s with programs: %v", user.Email, programList)
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "Token verified, user authenticated",
@@ -680,13 +680,13 @@ func (uc *UserController) SetFirstTimePassword(ctx *gin.Context) {
 		return
 	}
 
-	log.Printf("User before update: MustChangePassword=%v", user.MustChangePassword)
+	// log.Printf("User before update: MustChangePassword=%v", user.MustChangePassword)
 
 	// 6. Update user's password and set MustChangePassword to false
 	user.PasswordHash = string(hashedPassword)
 	user.MustChangePassword = false
 
-	log.Printf("User %d first-time password set, mustChangePassword updated to: %v", user.ID, user.MustChangePassword)
+	// log.Printf("User %d first-time password set, mustChangePassword updated to: %v", user.ID, user.MustChangePassword)
 
 	if result := uc.DB.Save(&user); result.Error != nil {
 		log.Printf("Error updating user password: %v", result.Error)
@@ -711,8 +711,8 @@ func (uc *UserController) SetFirstTimePassword(ctx *gin.Context) {
 		programList = append(programList, program)
 	}
 
-	log.Printf("User after update: MustChangePassword=%v", user.MustChangePassword)
-	log.Printf("Program list for updated user: %v", programList)
+	// log.Printf("User after update: MustChangePassword=%v", user.MustChangePassword)
+	// log.Printf("Program list for updated user: %v", programList)
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "Password set successfully! You can now access your workout.",

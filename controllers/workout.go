@@ -63,18 +63,93 @@ func (wc *WorkoutController) GetWorkoutDay(c *gin.Context) {
 	c.JSON(http.StatusOK, workoutDay)
 }
 
-func (wc *WorkoutController) GetWorkoutDayByProgramAndDay(c *gin.Context) {
+// GetWarmup retrieves the warmup routine for a specific program
+func (wc *WorkoutController) GetWarmup(c *gin.Context) {
+	wc.getRoutineByProgramName(c, "warmup")
+}
+
+// GetCooldown retrieves the cooldown routine for a specific program
+func (wc *WorkoutController) GetCooldown(c *gin.Context) {
+	wc.getRoutineByProgramName(c, "cooldown")
+}
+
+func (wc *WorkoutController) getRoutineByProgramName(c *gin.Context, routineType string) {
 	userID, exists := c.Get("userID")
 	if !exists {
-		fmt.Println("Backend: Authorization check failed - No userID in context.")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
-	fmt.Printf("Backend: User ID from context: %v\n", userID)
+
+	programName := c.Param("programName")
+
+	var user models.User
+	if err := wc.DB.Preload("UserPrograms.WorkoutProgram").First(&user, userID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user data"})
+		return
+	}
+
+	isAuthorized := false
+	if user.Role == "admin" {
+		isAuthorized = true
+	} else {
+		for _, userProgram := range user.UserPrograms {
+			if userProgram.WorkoutProgram.Name == programName {
+				isAuthorized = true
+				break
+			}
+		}
+	}
+
+	if !isAuthorized {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You are not authorised to view this program."})
+		return
+	}
+
+	var exerciseName string
+	switch routineType {
+	case "warmup":
+		exerciseName = "Warm Up"
+	case "cooldown":
+		exerciseName = "Cool Down"
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid routine type specified."})
+		return
+	}
+
+	var exercise models.Exercise
+	if err := wc.DB.Where("name = ?", exerciseName).First(&exercise).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": routineType + " routine not found"})
+		return
+	}
+
+	// Construct the response using the exercise data from the database
+	response := gin.H{
+		"videoUrl":     fmt.Sprintf("https://www.youtube.com/embed/%s", exercise.VideoID),
+		"description":  exercise.Description,
+		"instructions": exercise.Instructions,
+		"tips":         exercise.Tips,
+		"category":     exercise.Category,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+func (wc *WorkoutController) GetWorkoutDayByProgramAndDay(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		// fmt.Println("Backend: Authorization check failed - No userID in context.")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+	// fmt.Printf("Backend: User ID from context: %v\n", userID)
 
 	programName := c.Param("programName")
 	dayNumberStr := c.Param("dayNumber")
-	fmt.Printf("Backend: URL Params - ProgramName: %s, DayNumber: %s\n", programName, dayNumberStr)
+	// fmt.Printf("Backend: URL Params - ProgramName: %s, DayNumber: %s\n", programName, dayNumberStr)
 
 	dayNumber, err := strconv.Atoi(dayNumberStr)
 	if err != nil {
@@ -92,8 +167,8 @@ func (wc *WorkoutController) GetWorkoutDayByProgramAndDay(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user data"})
 		return
 	}
-	fmt.Printf("Backend: User from DB: Email: %s, Role: %s\n", user.Email, user.Role)
-	fmt.Printf("Backend: User purchased programs: %v\n", user.UserPrograms)
+	// fmt.Printf("Backend: User from DB: Email: %s, Role: %s\n", user.Email, user.Role)
+	// fmt.Printf("Backend: User purchased programs: %v\n", user.UserPrograms)
 
 	// 2. Perform the authorization check
 	isAuthorized := false

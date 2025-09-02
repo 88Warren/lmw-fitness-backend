@@ -14,6 +14,10 @@ type WorkoutProgram struct {
 	Duration    int          `json:"duration"`
 	IsActive    bool         `gorm:"default:true" json:"isActive"`
 	Days        []WorkoutDay `gorm:"foreignKey:ProgramID" json:"days"`
+	// WarmupVideoID   string       `json:"warmup_video_id"`
+	// WarmupDesc      string       `json:"warmup_description"`
+	// CooldownVideoID string       `json:"cooldown_video_id"`
+	// CooldownDesc    string       `json:"cooldown_description"`
 }
 
 type WorkoutDay struct {

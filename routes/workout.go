@@ -13,9 +13,10 @@ func RegisterWorkoutRoutes(router *gin.Engine, wc *controllers.WorkoutController
 	authenticated.Use(middleware.AuthMiddleware())
 	{
 		authenticated.GET("/programs/:programID/days/:dayNumber", wc.GetWorkoutDay)
-		authenticated.GET("/:programName/day/:dayNumber", wc.GetWorkoutDayByProgramAndDay)
-
 		authenticated.GET("/:programName/list", wc.GetProgramList)
+		authenticated.GET("/:programName/routines/warmup", wc.GetWarmup)
+		authenticated.GET("/:programName/routines/cooldown", wc.GetCooldown)
+		authenticated.GET("/:programName/day/:dayNumber", wc.GetWorkoutDayByProgramAndDay)
 
 		authenticated.POST("/start", wc.StartWorkout)
 		authenticated.POST("/complete-exercise", wc.CompleteExercise)
