@@ -8,117 +8,107 @@ import (
 	"gorm.io/gorm"
 )
 
-// A struct to hold a blog post's data and its corresponding file name.
-type blogSeedData struct {
-	Title      string
-	Excerpt    string
-	ImageURL   string
+type blogSeedConfig struct {
 	IsFeatured bool
 	Category   string
 	FileName   string
+	ImageURL   string
 }
 
-// BlogSeed populates the database with initial blog posts from HTML files.
 func BlogSeed(db *gorm.DB) {
-	blogData := []blogSeedData{
+	blogConfigs := []blogSeedConfig{
 		{
-			Title:      "If Not Now, Then When? Welcome to LMW Fitness!",
-			Excerpt:    "Hi, I’m Laura and I can’t tell you how excited I am to finally share my brand-new website with you!...",
-			ImageURL:   "https://placehold.co/1200x600/69002e/FFF?text=Welcome+to+LMW+Fitness",
 			IsFeatured: true,
 			Category:   "Motivation",
 			FileName:   "welcome.html",
+			ImageURL:   "https://placehold.co/1200x600/ffcf00/FFF?text=Welcome+to+LMW+Fitness",
 		},
 		{
-			Title:      "5 Nutrition Tips That Actually Make a Difference",
-			Excerpt:    "Hi, it’s Laura! Let’s chat about food – because training hard without fuelling properly is like putting cheap petrol in a Ferrari. Here are my top 5 nutrition tips for keeping your energy up, supporting your training and managing weight without the faff.",
-			ImageURL:   "https://images.pexels.com/photos/8846349/pexels-photo-8846349.jpeg",
 			IsFeatured: false,
 			Category:   "Nutrition",
 			FileName:   "nutrition_tips.html",
+			ImageURL:   "https://images.pexels.com/photos/566566/pexels-photo-566566.jpeg?_gl=1*1xl9fus*_ga*MTM3OTk1NTgzOS4xNzU2MzI3MTY2*_ga_8JE65Q40S6*czE3NTY4NDU2MjkkbzQkZzEkdDE3NTY4NDU4NzQkajQ5JGwwJGgw",
 		},
 		{
-			Title:      "5 Top Tips to Stay Motivated With Your Training",
-			Excerpt:    "Hi, it’s Laura! Let’s be honest – staying motivated with training isn’t always easy. Some days the sofa wins, the weather’s rubbish, or life just gets in the way. I’ve been there, and I’ve helped countless clients through it too.",
-			ImageURL:   "https://www.pexels.com/photo/woman-doing-body-check-6697178/",
 			IsFeatured: false,
 			Category:   "Motivation",
 			FileName:   "stay_motivated.html",
+			ImageURL:   "https://images.pexels.com/photos/5238670/pexels-photo-5238670.jpeg?_gl=1*yrfyei*_ga*MTM3OTk1NTgzOS4xNzU2MzI3MTY2*_ga_8JE65Q40S6*czE3NTY4OTY1MTgkbzUkZzEkdDE3NTY4OTY2NzYkajQ1JGwwJGgw",
 		},
 		{
-			Title:      "10 Fitness Tips You’re Probably Overlooking (But Shouldn’t!)",
-			Excerpt:    "Hi, it’s Laura here! I thought I’d share some of the little things that often get forgotten when people start a new fitness journey.",
-			ImageURL:   "https://www.pexels.com/photo/woman-wearing-oversized-jeans-7991930/",
 			IsFeatured: false,
 			Category:   "Fitness Tips",
 			FileName:   "fitness_tips.html",
+			ImageURL:   "https://images.pexels.com/photos/271897/pexels-photo-271897.jpeg?_gl=1*4jsn39*_ga*MTM3OTk1NTgzOS4xNzU2MzI3MTY2*_ga_8JE65Q40S6*czE3NTY4NDEwMTAkbzMkZzEkdDE3NTY4NDEwNjgkajIkbDAkaDA.",
 		},
 		{
-			Title:      "Why Recovery is Just as Important as Your Workout",
-			Excerpt:    "Hi, it’s Laura! We all love a good sweat session, but here’s the thing: recovery is just as important as the training itself. You can’t build strength, lose fat, or feel energised if you’re constantly running on empty",
-			ImageURL:   "https://www.pexels.com/photo/topless-man-in-black-shorts-doing-push-up-training-4803911/",
 			IsFeatured: true,
 			Category:   "Recovery",
 			FileName:   "why_recovery_important.html",
+			ImageURL:   "https://images.pexels.com/photos/2821823/pexels-photo-2821823.jpeg?_gl=1*11c1f3v*_ga*MTM3OTk1NTgzOS4xNzU2MzI3MTY2*_ga_8JE65Q40S6*czE3NTY4OTY1MTgkbzUkZzEkdDE3NTY4OTY1NDckajMxJGwwJGgw",
 		},
 		{
-			Title:      "Your Mindset Matters More Than You Think",
-			Excerpt:    "Hi, it’s Laura! I want to talk about something that gets overlooked way too often in fitness: your mindset. You can follow the perfect programme, eat the right foods and train consistently – but if your head isn’t in the game, progress can stall",
-			ImageURL:   "https://www.pexels.com/photo/woman-checking-weight-on-scales-in-studio-6975466/",
 			IsFeatured: true,
 			Category:   "Mindset",
 			FileName:   "mindset_matters.html",
+			ImageURL:   "https://images.pexels.com/photos/6690237/pexels-photo-6690237.jpeg?_gl=1*ecyrbb*_ga*MTM3OTk1NTgzOS4xNzU2MzI3MTY2*_ga_8JE65Q40S6*czE3NTY4NDEwMTAkbzMkZzEkdDE3NTY4NDI3MjAkajU5JGwwJGgw",
 		},
 		{
-			Title:      "5 Quick Workouts You Can Actually Stick To",
-			Excerpt:    "Hi, it’s Laura! Short on time but still want results? Here are my five go-to quick workouts that get your body moving and your energy up – no excuses!",
-			ImageURL:   "https://www.pexels.com/photo/crop-sportswoman-exercising-with-gymnastic-hula-hoop-4498154/",
 			IsFeatured: false,
 			Category:   "Workouts",
 			FileName:   "quick_workouts.html",
-		},
-		{
-			Title:      "15 Quick Workouts to Keep Your Training Fun",
-			Excerpt:    "Hi, it’s Laura! Have a look at these 15 x quick workouts to mix things up and keep your training inspiring:",
-			ImageURL:   "https://www.pexels.com/photo/a-man-in-black-shirt-holding-a-hamburger-5714271/",
-			IsFeatured: false,
-			Category:   "Workouts",
-			FileName:   "quick_workouts_cont.html",
+			ImageURL:   "https://images.pexels.com/photos/5714271/pexels-photo-5714271.jpeg?_gl=1*1iqkjxu*_ga*MTM3OTk1NTgzOS4xNzU2MzI3MTY2*_ga_8JE65Q40S6*czE3NTY4Mjc5MzQkbzIkZzEkdDE3NTY4MjgwMTQkajQ3JGwwJGgw",
 		},
 	}
 
-	for _, data := range blogData {
+	for _, config := range blogConfigs {
+		// log.Printf("Processing blog file: %s", config.FileName)
+
+		htmlContent, readErr := ReadHTMLFile(config.FileName)
+		if readErr != nil {
+			log.Printf("Failed to read content for blog file '%s': %v", config.FileName, readErr)
+			continue
+		}
+		metadata := ExtractBlogMetadata(htmlContent)
+
+		if metadata.Title == "" {
+			log.Printf("Could not extract title from '%s', skipping", config.FileName)
+			continue
+		}
+
 		var existingBlog models.Blog
-		log.Printf("Checking for existing blog post: '%s'", data.Title)
-		if err := db.Where("title = ?", data.Title).First(&existingBlog).Error; err != nil {
+		// log.Printf("Checking for existing blog post: '%s'", metadata.Title)
+		if err := db.Where("title = ?", metadata.Title).First(&existingBlog).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				log.Printf("Blog post '%s' not found, attempting to create.", data.Title)
-				fullContent, readErr := ReadHTMLFile(data.FileName)
-				if readErr != nil {
-					log.Printf("Failed to read content for blog post '%s' from 'database/content/blog/%s': %v", data.Title, data.FileName, readErr)
-					continue
+				// log.Printf("Blog post '%s' not found, creating new entry.", metadata.Title)
+
+				imageURL := config.ImageURL
+				if imageURL == "" {
+					imageURL = metadata.ImageURL
 				}
-				log.Printf("Successfully read content for '%s' from 'database/content/blog/%s'", data.Title, data.FileName)
 
 				blog := models.Blog{
-					Title:       data.Title,
-					Excerpt:     data.Excerpt,
-					ImageURL:    data.ImageURL,
-					IsFeatured:  data.IsFeatured,
-					Category:    data.Category,
-					FullContent: fullContent,
+					Title:       metadata.Title,
+					Excerpt:     metadata.Excerpt,
+					ImageURL:    imageURL,
+					IsFeatured:  config.IsFeatured,
+					Category:    config.Category,
+					FullContent: metadata.Content,
 				}
 
 				if result := db.Create(&blog); result.Error != nil {
 					log.Printf("Failed to seed blog post '%s': %v", blog.Title, result.Error)
 				} else {
-					log.Printf("Seeded blog post: %s", blog.Title)
+					log.Printf("Successfully seeded blog post: %s", blog.Title)
+					log.Printf("  - Extracted title: %s", metadata.Title)
+					log.Printf("  - Extracted excerpt: %.100s...", metadata.Excerpt)
+					log.Printf("  - Using image: %s", imageURL)
 				}
 			} else {
-				log.Printf("Database error while checking for blog post '%s': %v", data.Title, err)
+				log.Printf("Database error while checking for blog post '%s': %v", metadata.Title, err)
 			}
 		} else {
-			log.Printf("Blog post '%s' already exists, skipping.", data.Title)
+			log.Printf("Blog post '%s' already exists, skipping.", metadata.Title)
 		}
 	}
 	log.Println("Finished blog data seeding.")
