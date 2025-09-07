@@ -7,8 +7,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// Helper function to get an exercise ID by name
-// In a real application, this would be a more robust lookup.
 func getExerciseIDByName(db *gorm.DB, name string) (uint, error) {
 	var exercise models.Exercise
 	if err := db.Where("name = ?", name).First(&exercise).Error; err != nil {
@@ -17,7 +15,6 @@ func getExerciseIDByName(db *gorm.DB, name string) (uint, error) {
 	return exercise.ID, nil
 }
 
-// Helper function to get the program ID by name
 func getProgramIDByName(db *gorm.DB, name string) (uint, error) {
 	var program models.WorkoutProgram
 	if err := db.Where("name = ?", name).First(&program).Error; err != nil {
@@ -34,21 +31,20 @@ func BeginnerWorkoutDaySeed() {
 		log.Fatalf("Failed to find '30-Day Beginner Program': %v", err)
 	}
 
-	// Fetch all necessary exercise IDs upfront
 	exIDs := make(map[string]uint)
 	exercises := []string{
-		"Press Ups", "Squats", "Plank Hold", "Burpees", "Starjumps", "Diamond Sit Ups",
-		"Press Ups (on Knees)", "Crunches", "Glute Bridges", "Lunges", "Calf Raises",
-		"Leg Raises", "Donkey Kicks", "Wide Arm Press Ups (on Knees)", "Tricep Dips (Floor)",
-		"Plank Shoulder Taps", "Superman", "Walkaways", "Cross Jabs", "Dorsal Raises",
-		"Mountain Climbers", "Squat Jumps", "Ab Twists", "Bicycles", "Flutter Kicks",
-		"Half Sit Ups", "Heel Taps", "Bearcrawls", "T-Runs", "Y Shaped Lunges", "H.O.G. Press Ups",
-		"Moving Press Ups", "Scissors", "V Press Ups", "Straddle Sit Ups", "Sit Ups",
-		"Broad Jumps", "Squat Kicks", "Squat Twists", "Switch Kicks", "Standing Mountain Climbers",
-		"Sprints", "Sprawls", "Ski Jumps", "Plank Jabs", "Overhead Jabs", "Reverse Lunge",
-		"Oblique Hops", "Oblique Plank", "Lateral Lunges", "Plank Leg Raises", "Knees to Chest",
-		"High Knees", "Jack Knife", "Elbows to Knee", "Calf Jumps", "Box Jumps", "Belt Kicks",
-		"Toe Taps", "Tricep Dips (with Chair)",
+		"Ab Twists", "Bearcrawls", "Belt Kicks", "Bicycles", "Box Jumps", "Broad Jumps",
+		"Burpees", "Burpees (modified)", "Calf Jumps", "Calf Raises", "Cross Jabs",
+		"Crunches", "Diamond Press Ups (on Knees)", "Diamond Sit Ups", "Donkey Kicks",
+		"Dorsal Raises", "Elbows to Knee", "Flutter Kicks", "Glute Bridges", "H.O.G. Press Ups", "H.O.G. Press Ups (on Knees)",
+		"Half Sit Ups", "Heel Taps", "High Knees", "Jack Knife", "Knees to Chest", "Lateral Lunges",
+		"Leg Raises", "Lunges", "Mobility", "Mountain Climbers", "Moving Press Ups", "Oblique Hops",
+		"Oblique Plank", "Overhead Jabs", "Plank Hold", "Plank Jabs", "Plank Leg Raises",
+		"Plank Shoulder Taps", "Press Ups", "Press Ups (on Knees)", "Reverse Lunge", "Scissors",
+		"Sit Ups", "Ski Jumps", "Sprawls", "Sprints", "Squat Jumps", "Squat Kicks", "Squat Twists",
+		"Squats", "Squat Hold", "Starjumps", "Standing Mountain Climbers", "Straddle Sit Ups", "Superman",
+		"Switch Kicks", "T-Runs", "Toe Taps", "Tricep Dips (Floor)", "Tricep Dips (with Chair)",
+		"V Press Ups", "Walkaways", "Wide Arm Press Ups (on Knees)", "Y Shaped Lunges",
 	}
 
 	for _, name := range exercises {
@@ -59,19 +55,15 @@ func BeginnerWorkoutDaySeed() {
 		exIDs[name] = id
 	}
 
-	// Helper function to create a workout day and handle errors for BEGINNER program
 	createWorkoutDay := func(day models.WorkoutDay) {
 		var existingDay models.WorkoutDay
 		if err := DB.Where("program_id = ? AND day_number = ?", day.ProgramID, day.DayNumber).First(&existingDay).Error; err == nil {
-			// Log for beginner program
 			log.Printf("Beginner Program - Day %d already exists, skipping creation.", day.DayNumber)
 			return
 		}
 		if err := DB.Create(&day).Error; err != nil {
-			// Log for beginner program
 			log.Printf("Failed to create Beginner Program - Day %d: %v", day.DayNumber, err)
 		} else {
-			// Log for beginner program
 			log.Printf("Successfully created Beginner Program - Day %d: %s", day.DayNumber, day.Title)
 		}
 	}
@@ -87,13 +79,13 @@ func BeginnerWorkoutDaySeed() {
 				BlockType:  "Fitness Assessment",
 				BlockNotes: "Try to do as many reps as possible. Use the whole 2 mins rest after each exercise, to be able to give 100% effort for the next exercise.",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Press Ups"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
+					{Order: 1, ExerciseID: exIDs["Press Ups (on Knees)"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
 					{Order: 2, ExerciseID: exIDs["Squats"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
 					{Order: 3, ExerciseID: exIDs["Plank Hold"], Reps: "Max Effort", Duration: "Max Time", Rest: "2 mins"},
-					{Order: 4, ExerciseID: exIDs["Burpees"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
+					{Order: 4, ExerciseID: exIDs["Burpees (modified)"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
 					{Order: 5, ExerciseID: exIDs["Starjumps"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
 					{Order: 6, ExerciseID: exIDs["Sit Ups"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
-					{Order: 7, ExerciseID: exIDs["Lunges"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
+					{Order: 7, ExerciseID: exIDs["Lunges"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins", Tips: "2 Lunges = 1 rep"},
 					{Order: 8, ExerciseID: exIDs["Tricep Dips (with Chair)"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
 				},
 			},
@@ -106,7 +98,7 @@ func BeginnerWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   2,
 		Title:       "Lower Body Focus",
-		Description: "A circuit, focusing on your lower body to build strength and endurance.",
+		Description: "A circuit focusing on your lower body to build strength and endurance.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "Circuit",
@@ -130,16 +122,17 @@ func BeginnerWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   3,
 		Title:       "Upper Body Focus",
-		Description: "A circuit to build upper body strength.",
+		Description: "A circuit focusing on your upper body to build strength and endurance.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "Circuit",
 				BlockRounds: 3,
-				BlockNotes:  "30 seconds work, 15 seconds rest, with 60 seconds rest between rounds.",
+				RoundRest:   "60s",
+				BlockNotes:  "Exercise for 30 seconds and then rest for 15 seconds. Repeat the circuit 3 times. Rest 60 seconds between rounds. Full duration 20 minutes",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Wide Arm Press Ups (on Knees)"], Duration: "30s", Rest: "15s"},
-					{Order: 2, ExerciseID: exIDs["Tricep Dips (with Chair)"], Duration: "30s", Rest: "15s", Tips: "Can do on chair, sofa or step if you have one."},
-					{Order: 3, ExerciseID: exIDs["Plank Shoulder Taps"], Duration: "30s", Rest: "15s", Tips: "Can do on knees"},
+					{Order: 2, ExerciseID: exIDs["Tricep Dips (with Chair)"], Duration: "30s", Rest: "15s"},
+					{Order: 3, ExerciseID: exIDs["Plank Shoulder Taps"], Duration: "30s", Rest: "15s"},
 					{Order: 4, ExerciseID: exIDs["Superman"], Duration: "30s", Rest: "15s"},
 					{Order: 6, ExerciseID: exIDs["Plank Hold"], Duration: "30s", Rest: "15s"},
 					{Order: 6, ExerciseID: exIDs["Walkaways"], Duration: "30s", Rest: "15s"},
@@ -156,14 +149,14 @@ func BeginnerWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   4,
 		Title:       "Cardio & Core",
-		Description: "As many rounds as possible (AMRAP) in 12 minutes.",
+		Description: "As many rounds as possible (AMRAP) in 12 minutes. Track your rounds with the counter!",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:  "AMRAP",
-				BlockNotes: "12 minutes total.",
+				BlockNotes: "12 minutes",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Burpees"], Reps: "5", Tips: "Modified if needed"},
-					{Order: 2, ExerciseID: exIDs["Mountain Climbers"], Reps: "10"},
+					{Order: 1, ExerciseID: exIDs["Burpees (modified)"], Reps: "5"},
+					{Order: 2, ExerciseID: exIDs["Mountain Climbers"], Reps: "10", Tips: "2 Climbers = 1 rep"},
 					{Order: 3, ExerciseID: exIDs["Squat Jumps"], Reps: "15"},
 					{Order: 4, ExerciseID: exIDs["Ab Twists"], Reps: "20"},
 				},
@@ -177,18 +170,18 @@ func BeginnerWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   5,
 		Title:       "Full Body Circuit",
-		Description: "Every Minute on the Minute (EMOM) for 4 rounds.",
+		Description: "Every Minute on the Minute (EMOM), complete the number of reps within the minute. Faster you complete the more rest",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "EMOM",
-				BlockRounds: 4,
-				BlockNotes:  "Complete the designated reps at the top of each minute. If you finish early, rest until the next minute starts.",
+				BlockRounds: 3,
+				BlockNotes:  "15 minutes",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Squats"], Reps: "10", Tips: "Minute 1"},
-					{Order: 2, ExerciseID: exIDs["Press Ups (on Knees)"], Reps: "8", Tips: "Minute 2"},
-					{Order: 3, ExerciseID: exIDs["Lunges"], Reps: "6 per leg", Tips: "Minute 3"},
-					{Order: 4, ExerciseID: exIDs["Crunches"], Reps: "15", Tips: "Minute 4"},
-					{Order: 5, ExerciseID: exIDs["Starjumps"], Reps: "10", Tips: "Minute 5 (low impact)"},
+					{Order: 1, Instructions: "Minute 1", ExerciseID: exIDs["Squats"], Reps: "10"},
+					{Order: 2, Instructions: "Minute 2", ExerciseID: exIDs["Press Ups (on Knees)"], Reps: "8"},
+					{Order: 3, Instructions: "Minute 3", ExerciseID: exIDs["Lunges"], Reps: "6", Tips: "2 Lunges = 1 rep"},
+					{Order: 4, Instructions: "Minute 4", ExerciseID: exIDs["Crunches"], Reps: "15"},
+					{Order: 5, Instructions: "Minute 5", ExerciseID: exIDs["Starjumps"], Reps: "10"},
 				},
 			},
 		},
@@ -199,20 +192,21 @@ func BeginnerWorkoutDaySeed() {
 	day6 := models.WorkoutDay{
 		ProgramID:   programID,
 		DayNumber:   6,
-		Title:       "Active Recovery & Core",
-		Description: "A timed core workout for recovery and stability.",
+		Title:       "Core Blast",
+		Description: "A timed core workout for stability.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "Circuit",
 				BlockRounds: 4,
-				BlockNotes:  "30 seconds each exercise. 60 Second rest between rounds",
+				RoundRest:   "60s",
+				BlockNotes:  "Exercise for 30 seconds, no rest between exercises. 60 Second rest between rounds. Full duration 16 mintutes.",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Leg Raises"], Duration: "30s"},
-					{Order: 2, ExerciseID: exIDs["Bicycles"], Duration: "30s"},
-					{Order: 3, ExerciseID: exIDs["Flutter Kicks"], Duration: "30s"},
-					{Order: 4, ExerciseID: exIDs["Half Sit Ups"], Duration: "30s"},
-					{Order: 5, ExerciseID: exIDs["Heel Taps"], Duration: "30s"},
-					{Order: 6, ExerciseID: exIDs["Glute Bridges"], Duration: "30s"},
+					{Order: 1, ExerciseID: exIDs["Leg Raises"], Duration: "30s", Rest: "0s"},
+					{Order: 2, ExerciseID: exIDs["Bicycles"], Duration: "30s", Rest: "0s"},
+					{Order: 3, ExerciseID: exIDs["Flutter Kicks"], Duration: "30s", Rest: "0s"},
+					{Order: 4, ExerciseID: exIDs["Half Sit Ups"], Duration: "30s", Rest: "0s"},
+					{Order: 5, ExerciseID: exIDs["Heel Taps"], Duration: "30s", Rest: "0s"},
+					{Order: 6, ExerciseID: exIDs["Glute Bridges"], Duration: "30s", Rest: "0s"},
 				},
 			},
 		},
@@ -224,14 +218,17 @@ func BeginnerWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   7,
 		Title:       "Full Body Flow",
-		Description: "An EMOM workout alternating between two exercise sets for 16 minutes.",
+		Description: "Every Minute on the Minute (EMOM), complete the number of reps within the minute. Faster you complete the more rest",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
-				BlockType:  "EMOM",
-				BlockNotes: "16 minutes total, alternating between odd and even minutes.",
+				BlockType:   "EMOM",
+				BlockRounds: 4,
+				BlockNotes:  "16 minutes",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, Tips: "Odd minutes", Reps: "10 Squats + 5 Press Ups (on Knees)", ExerciseID: exIDs["Squats"]},
-					{Order: 2, Tips: "Even minutes", Reps: "30-second plank + 10 Calf Raises", ExerciseID: exIDs["Plank Hold"]},
+					{Order: 1, Instructions: "Minute 1", ExerciseID: exIDs["Squats"], Reps: "15"},
+					{Order: 2, Instructions: "Minute 2", ExerciseID: exIDs["Plank Hold"], Reps: "30s"},
+					{Order: 3, Instructions: "Minute 3", ExerciseID: exIDs["Press Ups (on Knees)"], Reps: "15"},
+					{Order: 4, Instructions: "Minute 4", ExerciseID: exIDs["Starjumps"], Reps: "30"},
 				},
 			},
 		},
@@ -242,20 +239,28 @@ func BeginnerWorkoutDaySeed() {
 	day8 := models.WorkoutDay{
 		ProgramID:   programID,
 		DayNumber:   8,
-		Title:       "Upper Body Strength & Mobility",
-		Description: "Optional mobility day AND/OR a regular workout focusing on upper body strength.",
+		Title:       "Recovery day & Optional workout",
+		Description: "Mobility AND/OR Workout: Upper body strength.",
 		WorkoutBlocks: []models.WorkoutBlock{
+			{
+				BlockType:   "Mobility",
+				BlockRounds: 1,
+				BlockNotes:  "A mobility session to stretch your tight muscle. Prevent injury and aid recovery",
+				Exercises: []models.WorkoutExercise{
+					{Order: 1, ExerciseID: exIDs["Mobility"]},
+				},
+			},
 			{
 				BlockType:   "Circuit",
 				BlockRounds: 3,
-				BlockNotes:  "30 seconds rest between sets.",
+				BlockNotes:  "Exercise for 40 seconds and then rest for 20 seconds. Repeat the circuit 3 times. Full duration 18 minutes.",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Press Ups"], Reps: "10", Tips: "Knee or full"},
-					{Order: 2, ExerciseID: exIDs["Tricep Dips (Floor)"], Reps: "15"},
-					{Order: 3, ExerciseID: exIDs["Walkaways"], Reps: "8"},
-					{Order: 4, ExerciseID: exIDs["Jack Knife"], Reps: "12"},
-					{Order: 5, ExerciseID: exIDs["Plank Leg Raises"], Reps: "10 per leg"},
-					{Order: 6, ExerciseID: exIDs["Diamond Sit Ups"], Reps: "15"},
+					{Order: 1, ExerciseID: exIDs["Press Ups (on Knees)"], Duration: "40s", Rest: "20s"},
+					{Order: 2, ExerciseID: exIDs["Tricep Dips (with Chair)"], Duration: "40s", Rest: "20s"},
+					{Order: 3, ExerciseID: exIDs["Walkaways"], Duration: "40s", Rest: "20s"},
+					{Order: 4, ExerciseID: exIDs["Jack Knife"], Duration: "40s", Rest: "20s"},
+					{Order: 5, ExerciseID: exIDs["Plank Leg Raises"], Duration: "40s", Rest: "20s"},
+					{Order: 6, ExerciseID: exIDs["Diamond Sit Ups"], Duration: "40s", Rest: "20s"},
 				},
 			},
 		},
@@ -272,7 +277,7 @@ func BeginnerWorkoutDaySeed() {
 			{
 				BlockType:   "Circuit",
 				BlockRounds: 4,
-				BlockNotes:  "40 seconds work, 20 seconds rest.",
+				BlockNotes:  "Exercise for 40 seconds and then rest for 20 seconds. Repeat the circuit 4 times. Full duration 20 minutes.",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Squat Kicks"], Duration: "40s", Rest: "20s"},
 					{Order: 2, ExerciseID: exIDs["Y Shaped Lunges"], Duration: "40s", Rest: "20s"},
@@ -294,19 +299,29 @@ func BeginnerWorkoutDaySeed() {
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "Tabata",
-				BlockRounds: 5,
-				BlockNotes:  "8 sets, 20s on, 10s off. Alternate between exercises in each round.",
+				BlockRounds: 8,
+				BlockNotes:  "20s work / 10s rest x 8 rounds",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Mountain Climbers"], Reps: "Tabata Round 1"},
-					{Order: 2, ExerciseID: exIDs["Plank Hold"], Reps: "Tabata Round 1"},
-					{Order: 3, ExerciseID: exIDs["Bicycles"], Reps: "Tabata Round 2"},
-					{Order: 4, ExerciseID: exIDs["Leg Raises"], Reps: "Tabata Round 2"},
-					{Order: 5, ExerciseID: exIDs["Ab Twists"], Reps: "Tabata Round 3"},
-					{Order: 6, ExerciseID: exIDs["Flutter Kicks"], Reps: "Tabata Round 3"},
-					{Order: 7, ExerciseID: exIDs["Crunches"], Reps: "Tabata Round 4"},
-					{Order: 8, ExerciseID: exIDs["Scissors"], Reps: "Tabata Round 4"},
-					{Order: 9, ExerciseID: exIDs["Superman"], Reps: "Tabata Round 5"},
-					{Order: 10, ExerciseID: exIDs["Half Sit Ups"], Reps: "Tabata Round 5"},
+					{Order: 1, ExerciseID: exIDs["Mountain Climbers"], Duration: "20s", Rest: "10s"},
+					{Order: 2, ExerciseID: exIDs["Plank Hold"], Duration: "20s", Rest: "10s"},
+				},
+			},
+			{
+				BlockType:   "Tabata",
+				BlockRounds: 8,
+				BlockNotes:  "20s work / 10s rest x 8 rounds",
+				Exercises: []models.WorkoutExercise{
+					{Order: 1, ExerciseID: exIDs["Bicycles"], Duration: "20s", Rest: "10s"},
+					{Order: 2, ExerciseID: exIDs["Leg Raises"], Duration: "20s", Rest: "10s"},
+				},
+			},
+			{
+				BlockType:   "Tabata",
+				BlockRounds: 8,
+				BlockNotes:  "20s work / 10s rest x 8 rounds",
+				Exercises: []models.WorkoutExercise{
+					{Order: 1, ExerciseID: exIDs["Ab Twists"], Duration: "20s", Rest: "10s"},
+					{Order: 2, ExerciseID: exIDs["Flutter Kicks"], Duration: "20s", Rest: "10s"},
 				},
 			},
 		},
@@ -318,16 +333,16 @@ func BeginnerWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   11,
 		Title:       "Full Body Cardio",
-		Description: "As many rounds as possible (AMRAP) in 15 minutes.",
+		Description: "As many rounds as possible (AMRAP) in 15 minutes. Track your rounds with the counter!",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:  "AMRAP",
-				BlockNotes: "15 minutes total.",
+				BlockNotes: "15 minutes",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Burpees"], Reps: "3"},
+					{Order: 1, ExerciseID: exIDs["Burpees (modified)"], Reps: "3"},
 					{Order: 2, ExerciseID: exIDs["Squat Twists"], Reps: "6"},
-					{Order: 3, ExerciseID: exIDs["Press Ups"], Reps: "9", Tips: "Knee or full"},
-					{Order: 4, ExerciseID: exIDs["High Knees"], Reps: "12"},
+					{Order: 3, ExerciseID: exIDs["Press Ups (on Knees)"], Reps: "9"},
+					{Order: 4, ExerciseID: exIDs["High Knees"], Reps: "12", Tips: "2 High Knees = 1 rep"},
 				},
 			},
 		},
@@ -344,7 +359,7 @@ func BeginnerWorkoutDaySeed() {
 			{
 				BlockType:   "Circuit",
 				BlockRounds: 3,
-				BlockNotes:  "45 seconds work, 15 seconds rest.",
+				BlockNotes:  "Exercise for 45 seconds and then rest for 15 seconds. Repeat the circuit 3 times. Full duration 21 minutes.",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Overhead Jabs"], Duration: "45s", Rest: "15s"},
 					{Order: 2, ExerciseID: exIDs["Broad Jumps"], Duration: "45s", Rest: "15s"},
@@ -369,7 +384,7 @@ func BeginnerWorkoutDaySeed() {
 			{
 				BlockType:   "Circuit",
 				BlockRounds: 3,
-				BlockNotes:  "Core Circuit: 30s work, 15s rest.",
+				BlockNotes:  "Exercise for 30 seconds and then rest for 15 seconds. Repeat the circuit 3 times. Full duration 9 minutes.",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Half Sit Ups"], Duration: "30s", Rest: "15s"},
 					{Order: 2, ExerciseID: exIDs["Scissors"], Duration: "30s", Rest: "15s"},
@@ -380,7 +395,7 @@ func BeginnerWorkoutDaySeed() {
 			{
 				BlockType:   "Circuit",
 				BlockRounds: 3,
-				BlockNotes:  "Cardio Circuit: 45s work, 15s rest.",
+				BlockNotes:  "Exercise for 45 seconds and then rest for 15 seconds. Repeat the circuit 3 times. Full duration 12 minutes.",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Burpees"], Duration: "45s", Rest: "15s"},
 					{Order: 2, ExerciseID: exIDs["Starjumps"], Duration: "45s", Rest: "15s"},
@@ -396,15 +411,18 @@ func BeginnerWorkoutDaySeed() {
 	day14 := models.WorkoutDay{
 		ProgramID:   programID,
 		DayNumber:   14,
-		Title:       "EMOM 16 minutes (alternate)",
-		Description: "An EMOM workout alternating between two exercises.",
+		Title:       "Full Body Switch Up",
+		Description: "Every Minute on the Minute (EMOM), complete the number of reps within the minute. Faster you complete the more rest",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
-				BlockType:  "EMOM",
-				BlockNotes: "16 minutes total. Odd minutes: HOG Press Ups (20 reps). Even minutes: Squats (20 reps). Rest remainder of minute.",
+				BlockType:   "EMOM",
+				BlockRounds: 4,
+				BlockNotes:  "16 minutes",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["H.O.G. Press Ups"], Reps: "20", Tips: "Odd minutes"},
-					{Order: 2, ExerciseID: exIDs["Squats"], Reps: "20", Tips: "Even minutes"},
+					{Order: 1, Instructions: "Minute 1", ExerciseID: exIDs["H.O.G. Press Ups (on Knees)"], Reps: "20"},
+					{Order: 2, Instructions: "Minute 2", ExerciseID: exIDs["Squats"], Reps: "20"},
+					{Order: 3, Instructions: "Minute 3", ExerciseID: exIDs["Diamond Press Ups (on Knees)"], Reps: "20"},
+					{Order: 4, Instructions: "Minute 4", ExerciseID: exIDs["Squat Hold"], Duration: "30s"},
 				},
 			},
 		},
@@ -415,19 +433,27 @@ func BeginnerWorkoutDaySeed() {
 	day15 := models.WorkoutDay{
 		ProgramID:   programID,
 		DayNumber:   15,
-		Title:       "Power Circuit & Mobility",
-		Description: "Optional mobility AND/OR a power circuit focusing on endurance.",
+		Title:       "Recovery day & Optional workout",
+		Description: "Mobility AND/OR Workout: Power circuit focusing on endurance.",
 		WorkoutBlocks: []models.WorkoutBlock{
+			{
+				BlockType:   "Mobility",
+				BlockRounds: 1,
+				BlockNotes:  "A mobility session to stretch your tight muscle. Prevent injury and aid recovery",
+				Exercises: []models.WorkoutExercise{
+					{Order: 1, ExerciseID: exIDs["Mobility"]},
+				},
+			},
 			{
 				BlockType:   "Circuit",
 				BlockRounds: 4,
-				BlockNotes:  "35s work, 25s rest.",
+				BlockNotes:  "Exercise for 35 seconds and then rest for 25 seconds. Repeat the circuit 4 times. Full duration 20 minutes",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Squat Jumps"], Duration: "35s", Rest: "25s"},
-					{Order: 2, ExerciseID: exIDs["Press Ups"], Duration: "35s", Rest: "25s", Tips: "Modified"},
+					{Order: 2, ExerciseID: exIDs["Press Ups"], Duration: "35s", Rest: "25s"},
 					{Order: 3, ExerciseID: exIDs["Mountain Climbers"], Duration: "35s", Rest: "25s"},
 					{Order: 4, ExerciseID: exIDs["Lunges"], Duration: "35s", Rest: "25s"},
-					{Order: 5, ExerciseID: exIDs["Burpees"], Duration: "35s", Rest: "25s", Tips: "Modified"},
+					{Order: 5, ExerciseID: exIDs["Burpees"], Duration: "35s", Rest: "25s"},
 					{Order: 6, ExerciseID: exIDs["Starjumps"], Duration: "35s", Rest: "25s"},
 				},
 			},
@@ -440,17 +466,17 @@ func BeginnerWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   16,
 		Title:       "Upper Body Challenge",
-		Description: "An EMOM workout targeting the upper body.",
+		Description: "Every Minute on the Minute (EMOM), complete the number of reps within the minute. Faster you complete the more rest",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "EMOM",
-				BlockRounds: 3,
-				BlockNotes:  "12 minutes total. 45s work, then rest until the next minute starts.",
+				BlockRounds: 4,
+				BlockNotes:  "16 minutes total",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Press Ups"], Reps: "Max", Duration: "45s", Tips: "Minute 1"},
-					{Order: 2, ExerciseID: exIDs["Tricep Dips (Floor)"], Reps: "Max", Duration: "45s", Tips: "Minute 2"},
-					{Order: 3, ExerciseID: exIDs["V Press Ups"], Reps: "Max", Duration: "45s", Tips: "Minute 3"},
-					{Order: 4, ExerciseID: exIDs["Plank Hold"], Reps: "Max Hold", Duration: "45s", Tips: "Minute 4"},
+					{Order: 1, Instructions: "Minute 1", ExerciseID: exIDs["Press Ups (on Knees)"], Reps: "15"},
+					{Order: 2, Instructions: "Minute 2", ExerciseID: exIDs["Tricep Dips (with Chair)"], Reps: "15"},
+					{Order: 3, Instructions: "Minute 3", ExerciseID: exIDs["V Press Ups"], Reps: "15"},
+					{Order: 4, Instructions: "Minute 4", ExerciseID: exIDs["Plank Hold"], Reps: "30s"},
 				},
 			},
 		},
@@ -462,16 +488,16 @@ func BeginnerWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   17,
 		Title:       "Lower Body Endurance",
-		Description: "A ladder workout for lower body endurance.",
+		Description: "A pyramid workout for lower body endurance. Complete all exercises from 3 reps to 7 reps and back to 3 reps",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
-				BlockType:  "Ladder",
-				BlockNotes: "Pyramid up and down: 3-4-5-6-7-6-5-4-3 reps.",
+				BlockType:  "For Time",
+				BlockNotes: "Pyramid: 3-4-5-6-7-6-5-4-3 reps.",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Squat Jumps"]},
-					{Order: 2, ExerciseID: exIDs["Lunges"], Tips: "Each leg / Jumps"},
-					{Order: 3, ExerciseID: exIDs["Calf Jumps"], Tips: "Raises"},
-					{Order: 4, ExerciseID: exIDs["Box Jumps"]},
+					{Order: 1, ExerciseID: exIDs["Squat Jumps"], Reps: "3, 4, 5, 6, 7, 6, 5, 4, 3"},
+					{Order: 2, ExerciseID: exIDs["Lunges"], Reps: "3, 4, 5, 6, 7, 6, 5, 4, 3", Tips: "2 Lunges = 1 rep"},
+					{Order: 3, ExerciseID: exIDs["Calf Jumps"], Reps: "3, 4, 5, 6, 7, 6, 5, 4, 3"},
+					{Order: 4, ExerciseID: exIDs["Box Jumps"], Reps: "3, 4, 5, 6, 7, 6, 5, 4, 3", Tips: "1 Full box = 1 rep"},
 				},
 			},
 		},
@@ -487,13 +513,29 @@ func BeginnerWorkoutDaySeed() {
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "Tabata",
-				BlockRounds: 2,
-				BlockNotes:  "6 Tabata rounds of each exercise (20s work, 10s rest). Rest 90 seconds between rounds.",
+				BlockRounds: 8,
+				BlockNotes:  "20s work / 10s rest x 8 rounds",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Burpees"], Reps: "Round 1"},
-					{Order: 2, ExerciseID: exIDs["Mountain Climbers"], Reps: "Round 2"},
-					{Order: 3, ExerciseID: exIDs["Starjumps"], Reps: "Round 3"},
-					{Order: 4, ExerciseID: exIDs["High Knees"], Reps: "Round 4"},
+					{Order: 1, ExerciseID: exIDs["Burpees"], Duration: "20s", Rest: "10s"},
+					{Order: 2, ExerciseID: exIDs["High Knees"], Duration: "20s", Rest: "10s"},
+				},
+			},
+			{
+				BlockType:   "Tabata",
+				BlockRounds: 8,
+				BlockNotes:  "20s work / 10s rest x 8 rounds",
+				Exercises: []models.WorkoutExercise{
+					{Order: 1, ExerciseID: exIDs["Mountain Climbers"], Duration: "20s", Rest: "10s"},
+					{Order: 2, ExerciseID: exIDs["Squat Jumps"], Duration: "20s", Rest: "10s"},
+				},
+			},
+			{
+				BlockType:   "Tabata",
+				BlockRounds: 8,
+				BlockNotes:  "20s work / 10s rest x 8 rounds",
+				Exercises: []models.WorkoutExercise{
+					{Order: 1, ExerciseID: exIDs["Starjumps"], Duration: "20s", Rest: "10s"},
+					{Order: 2, ExerciseID: exIDs["Sprints"], Duration: "20s", Rest: "10s"},
 				},
 			},
 		},
@@ -510,13 +552,13 @@ func BeginnerWorkoutDaySeed() {
 			{
 				BlockType:   "Circuit",
 				BlockRounds: 5,
-				BlockNotes:  "10 reps each. 60 seconds rest between rounds.",
+				BlockNotes:  "Exercise for 40 seconds and then rest for 20 seconds. Repeat the circuit 5 times. Full duration 25 minutes.",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Squats"], Reps: "10"},
-					{Order: 2, ExerciseID: exIDs["Press Ups"], Reps: "10"},
-					{Order: 3, ExerciseID: exIDs["Lunges"], Reps: "10 per leg"},
-					{Order: 4, ExerciseID: exIDs["Tricep Dips (Floor)"], Reps: "10"},
-					{Order: 5, ExerciseID: exIDs["Plank Shoulder Taps"], Reps: "10 per side"},
+					{Order: 1, ExerciseID: exIDs["Squats"], Duration: "40s", Rest: "20s"},
+					{Order: 2, ExerciseID: exIDs["Press Ups"], Duration: "40s", Rest: "20s"},
+					{Order: 3, ExerciseID: exIDs["Lunges"], Duration: "40s", Rest: "20s"},
+					{Order: 4, ExerciseID: exIDs["Tricep Dips (with Chair)"], Duration: "40s", Rest: "20s"},
+					{Order: 5, ExerciseID: exIDs["Plank Shoulder Taps"], Duration: "40s", Rest: "20s"},
 				},
 			},
 		},
@@ -528,17 +570,17 @@ func BeginnerWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   20,
 		Title:       "Core Intensive",
-		Description: "An AMRAP focused on core strength.",
+		Description: "As many rounds as possible (AMRAP) in 18 minutes. Track your rounds with the counter!",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:  "AMRAP",
-				BlockNotes: "18 minutes total. Complete as many rounds as possible.",
+				BlockNotes: "18 minutes",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Sit Ups"], Reps: "10"},
-					{Order: 2, ExerciseID: exIDs["Bicycles"], Reps: "15 each side"},
-					{Order: 3, ExerciseID: exIDs["Flutter Kicks"], Reps: "20"},
+					{Order: 2, ExerciseID: exIDs["Bicycles"], Reps: "15", Tips: "2 Bicycles = 1 rep"},
+					{Order: 3, ExerciseID: exIDs["Flutter Kicks"], Reps: "20", Tips: "2 Kicks = 1 rep"},
 					{Order: 4, ExerciseID: exIDs["Ab Twists"], Reps: "25"},
-					{Order: 5, ExerciseID: exIDs["Plank Hold"], Duration: "30s"},
+					{Order: 5, ExerciseID: exIDs["Plank Shoulder Taps"], Reps: "15", Tips: "2 Taps = 1 rep"},
 				},
 			},
 		},
@@ -550,16 +592,16 @@ func BeginnerWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   21,
 		Title:       "Cardio Finisher",
-		Description: "A descending ladder workout.",
+		Description: "A descending ladder workout. Complete all exercises from 10 reps down to 1 rep.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
-				BlockType:  "Ladder",
-				BlockNotes: "Descending ladder (10,9,8...1). Complete all exercises at each number.",
+				BlockType:  "For Time",
+				BlockNotes: "Descending ladder: 10-9-8-7-6-5-4-3-2-1 reps.",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Burpees"]},
-					{Order: 2, ExerciseID: exIDs["Squat Jumps"]},
-					{Order: 3, ExerciseID: exIDs["Press Ups"]},
-					{Order: 4, ExerciseID: exIDs["Starjumps"]},
+					{Order: 1, ExerciseID: exIDs["Burpees"], Reps: "10, 9, 8, 7, 6, 5, 4, 3, 2, 1"},
+					{Order: 2, ExerciseID: exIDs["Squat Jumps"], Reps: "10, 9, 8, 7, 6, 5, 4, 3, 2, 1"},
+					{Order: 3, ExerciseID: exIDs["Press Ups"], Reps: "10, 9, 8, 7, 6, 5, 4, 3, 2, 1"},
+					{Order: 4, ExerciseID: exIDs["Starjumps"], Reps: "10, 9, 8, 7, 6, 5, 4, 3, 2, 1"},
 				},
 			},
 		},
@@ -570,17 +612,26 @@ func BeginnerWorkoutDaySeed() {
 	day22 := models.WorkoutDay{
 		ProgramID:   programID,
 		DayNumber:   22,
-		Title:       "Strength Test Prep & Mobility",
-		Description: "Optional mobility AND/OR a workout to prepare for a strength test.",
+		Title:       "Recovery day & Optional workout",
+		Description: "Mobility AND/OR Workout: Full body circuit.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
-				BlockType:  "Strength Test",
-				BlockNotes: "Light movement and stretching.",
+				BlockType:   "Mobility",
+				BlockRounds: 1,
+				BlockNotes:  "A mobility session to stretch your tight muscle. Prevent injury and aid recovery",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Press Ups"], Reps: "5 sets of max reps"},
-					{Order: 2, ExerciseID: exIDs["Squats"], Reps: "5 sets of 15-20 reps"},
-					{Order: 3, ExerciseID: exIDs["Plank Hold"], Reps: "3 max effort holds"},
-					{Order: 4, ExerciseID: exIDs["Walkaways"], Reps: "5 sets of 10 reps"},
+					{Order: 1, ExerciseID: exIDs["Mobility"]},
+				},
+			},
+			{
+				BlockType:   "Circuit",
+				BlockRounds: 4,
+				BlockNotes:  "Exercise for 40 seconds and then rest for 20 seconds. Repeat the circuit 3 times. Full duration 16 minutes.",
+				Exercises: []models.WorkoutExercise{
+					{Order: 1, ExerciseID: exIDs["Press Ups (on Knees)"], Duration: "40s", Rest: "20s"},
+					{Order: 2, ExerciseID: exIDs["Squats"], Duration: "40s", Rest: "20s"},
+					{Order: 3, ExerciseID: exIDs["Plank Hold"], Duration: "40s", Rest: "20s"},
+					{Order: 4, ExerciseID: exIDs["Walkaways"], Duration: "40s", Rest: "20s"},
 				},
 			},
 		},
@@ -592,26 +643,27 @@ func BeginnerWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   23,
 		Title:       "Upper Body & Core Challenge",
-		Description: "An EMOM circuit followed by a timed core workout.",
+		Description: "An EMOM circuit followed by a core circuit.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "EMOM",
 				BlockRounds: 4,
-				BlockNotes:  "4 rounds total.",
+				BlockNotes:  "12 minutes",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Moving Press Ups"], Reps: "8", Tips: "Minute 1"},
-					{Order: 2, ExerciseID: exIDs["Oblique Plank"], Reps: "10", Tips: "Minute 2"},
-					{Order: 3, ExerciseID: exIDs["Bearcrawls"], Reps: "Forward + back x 4", Tips: "Minute 3"},
+					{Order: 1, Instructions: "Minute 1", ExerciseID: exIDs["Moving Press Ups"], Reps: "8"},
+					{Order: 2, Instructions: "Minute 2", ExerciseID: exIDs["Oblique Plank"], Reps: "10"},
+					{Order: 3, Instructions: "Minute 3", ExerciseID: exIDs["Bearcrawls"], Reps: "4", Tips: "1 x forward and 1 x backward = 1 rep"},
 				},
 			},
 			{
 				BlockType:   "Circuit",
 				BlockRounds: 3,
-				BlockNotes:  "Timed Core: 30s work, 15s rest.",
+				BlockNotes:  "Exercise for 30 seconds and then rest for 15 seconds. Repeat the circuit 3 times. Full duration 9 minutes.",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Toe Taps"], Duration: "30s", Rest: "15s"},
 					{Order: 2, ExerciseID: exIDs["Straddle Sit Ups"], Duration: "30s", Rest: "15s"},
 					{Order: 3, ExerciseID: exIDs["Scissors"], Duration: "30s", Rest: "15s"},
+					{Order: 4, ExerciseID: exIDs["Ab Twists"], Duration: "30s", Rest: "15s"},
 				},
 			},
 		},
@@ -623,22 +675,42 @@ func BeginnerWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   24,
 		Title:       "Full Body Tabata",
-		Description: "A full body workout with multiple Tabata pairs.",
+		Description: "A full body workout with multiple Tabata blocks.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
-				BlockType:  "Tabata",
-				BlockNotes: "8 rounds, 20s work, 10s rest for each pair. Rest 30s between pairs.",
+				BlockType:   "Tabata",
+				BlockRounds: 8,
+				BlockNotes:  "20s work / 10s rest x 8 rounds",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Squats"], Tips: "Tabata 1"},
-					{Order: 2, ExerciseID: exIDs["Starjumps"], Tips: "Tabata 1"},
-					{Order: 3, ExerciseID: exIDs["Press Ups"], Tips: "Tabata 2"},
-					{Order: 4, ExerciseID: exIDs["Mountain Climbers"], Tips: "Tabata 2"},
-					{Order: 5, ExerciseID: exIDs["Lunges"], Tips: "Tabata 3"},
-					{Order: 6, ExerciseID: exIDs["High Knees"], Tips: "Tabata 3"},
-					{Order: 7, ExerciseID: exIDs["Ab Twists"], Tips: "Tabata 4"},
-					{Order: 8, ExerciseID: exIDs["Diamond Sit Ups"], Tips: "Tabata 4"},
-					{Order: 9, ExerciseID: exIDs["Elbows to Knee"], Tips: "Tabata 5"},
-					{Order: 10, ExerciseID: exIDs["Ski Jumps"], Tips: "Tabata 5"},
+					{Order: 1, ExerciseID: exIDs["Squats"], Duration: "20s", Rest: "10s"},
+					{Order: 2, ExerciseID: exIDs["Starjumps"], Duration: "20s", Rest: "10s"},
+				},
+			},
+			{
+				BlockType:   "Tabata",
+				BlockRounds: 8,
+				BlockNotes:  "20s work / 10s rest x 8 rounds",
+				Exercises: []models.WorkoutExercise{
+					{Order: 1, ExerciseID: exIDs["Press Ups"], Duration: "20s", Rest: "10s"},
+					{Order: 2, ExerciseID: exIDs["Mountain Climbers"], Duration: "20s", Rest: "10s"},
+				},
+			},
+			{
+				BlockType:   "Tabata",
+				BlockRounds: 8,
+				BlockNotes:  "20s work / 10s rest x 8 rounds",
+				Exercises: []models.WorkoutExercise{
+					{Order: 1, ExerciseID: exIDs["Lunges"], Duration: "20s", Rest: "10s"},
+					{Order: 2, ExerciseID: exIDs["High Knees"], Duration: "20s", Rest: "10s"},
+				},
+			},
+			{
+				BlockType:   "Tabata",
+				BlockRounds: 8,
+				BlockNotes:  "20s work / 10s rest x 8 rounds",
+				Exercises: []models.WorkoutExercise{
+					{Order: 1, ExerciseID: exIDs["Elbows to Knee"], Duration: "20s", Rest: "10s"},
+					{Order: 2, ExerciseID: exIDs["Ski Jumps"], Duration: "20s", Rest: "10s"},
 				},
 			},
 		},
@@ -650,16 +722,16 @@ func BeginnerWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   25,
 		Title:       "Endurance Challenge",
-		Description: "As many rounds as possible (AMRAP) in 20 minutes.",
+		Description: "As many rounds as possible (AMRAP) in 20 minutes. Track your rounds with the counter!",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:  "AMRAP",
-				BlockNotes: "20 minutes total.",
+				BlockNotes: "20 minutes",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Burpees"], Reps: "5"},
 					{Order: 2, ExerciseID: exIDs["Squat Jumps"], Reps: "10"},
 					{Order: 3, ExerciseID: exIDs["Press Ups"], Reps: "15"},
-					{Order: 4, ExerciseID: exIDs["Mountain Climbers"], Reps: "20"},
+					{Order: 4, ExerciseID: exIDs["Mountain Climbers"], Reps: "20", Tips: "2 Climberss = 1 rep"},
 					{Order: 5, ExerciseID: exIDs["Starjumps"], Reps: "25"},
 				},
 			},
@@ -677,9 +749,10 @@ func BeginnerWorkoutDaySeed() {
 			{
 				BlockType:   "Circuit",
 				BlockRounds: 4,
-				BlockNotes:  "50s work, 10s rest. 60-90s rest between rounds.",
+				RoundRest:   "60s",
+				BlockNotes:  "Exercise for 50 seconds and then rest for 10 seconds. Repeat the circuit 4 times. Rest 60 seconds between rounds. Full duration 24 minutes.",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Sprints"], Duration: "50s", Rest: "10s", Tips: "On the spot"},
+					{Order: 1, ExerciseID: exIDs["Sprints"], Duration: "50s", Rest: "10s"},
 					{Order: 2, ExerciseID: exIDs["Sprawls"], Duration: "50s", Rest: "10s"},
 					{Order: 3, ExerciseID: exIDs["T-Runs"], Duration: "50s", Rest: "10s"},
 					{Order: 4, ExerciseID: exIDs["Ski Jumps"], Duration: "50s", Rest: "10s"},
@@ -695,18 +768,18 @@ func BeginnerWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   27,
 		Title:       "Full Body Conditioning",
-		Description: "An EMOM circuit for full body conditioning.",
+		Description: "Every Minute on the Minute (EMOM), complete the number of reps within the minute. Faster you complete the more rest",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "EMOM",
-				BlockRounds: 5,
-				BlockNotes:  "5 rounds total. Perform reps at the top of each minute.",
+				BlockRounds: 4,
+				BlockNotes:  "20 minutes",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Squat Jumps"], Reps: "12", Tips: "Minute 1"},
-					{Order: 2, ExerciseID: exIDs["Press Ups"], Reps: "12", Tips: "Minute 2 (full or on knees)"},
-					{Order: 3, ExerciseID: exIDs["Lunges"], Reps: "10 per leg", Tips: "Minute 3"},
-					{Order: 4, ExerciseID: exIDs["Mountain Climbers"], Reps: "30 total", Tips: "Minute 4"},
-					{Order: 5, ExerciseID: exIDs["Jack Knife"], Reps: "10", Tips: "Minute 5"},
+					{Order: 1, Instructions: "Minute 1", ExerciseID: exIDs["Squat Jumps"], Reps: "12"},
+					{Order: 2, Instructions: "Minute 2", ExerciseID: exIDs["Press Ups (on Knees)"], Reps: "12"},
+					{Order: 3, Instructions: "Minute 3", ExerciseID: exIDs["Lunges"], Reps: "10", Tips: "2 Lunges = 1 rep"},
+					{Order: 4, Instructions: "Minute 4", ExerciseID: exIDs["Mountain Climbers"], Reps: "20", Tips: "2 Climbers = 1 rep"},
+					{Order: 5, Instructions: "Minute 5", ExerciseID: exIDs["Jack Knife"], Reps: "10"},
 				},
 			},
 		},
@@ -717,18 +790,18 @@ func BeginnerWorkoutDaySeed() {
 	day28 := models.WorkoutDay{
 		ProgramID:   programID,
 		DayNumber:   28,
-		Title:       "Full Body Pyramid Workout",
-		Description: "A pyramid workout with a mix of exercises.",
+		Title:       "Full Body Workout",
+		Description: "A pyramid workout with a mix of exercises. Complete all exercises from 1 to 10reps and back down to 1 rep",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
-				BlockType:  "Pyramid",
-				BlockNotes: "Pyramid up and down: 1-10 reps then back down to 1.",
+				BlockType:  "For Time",
+				BlockNotes: "Pyramid: 1-2-3-4-5-6-7-8-9-10-9-8-7-6-5-4-3-2-1 reps.",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Squat Jumps"], Tips: "Or Squats"},
-					{Order: 2, ExerciseID: exIDs["Press Ups"], Tips: "Or on Knees"},
-					{Order: 3, ExerciseID: exIDs["Plank Jabs"], Reps: "2 Jabs = 1 rep"},
-					{Order: 4, ExerciseID: exIDs["Reverse Lunge"]},
-					{Order: 5, ExerciseID: exIDs["Diamond Sit Ups"]},
+					{Order: 1, ExerciseID: exIDs["Squat Jumps"], Reps: "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1"},
+					{Order: 2, ExerciseID: exIDs["Press Ups"], Reps: "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1"},
+					{Order: 3, ExerciseID: exIDs["Plank Jabs"], Reps: "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1", Tips: "2 Jabs = 1 rep"},
+					{Order: 4, ExerciseID: exIDs["Reverse Lunge"], Reps: "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1", Tips: "2 Lunges = 1 rep"},
+					{Order: 5, ExerciseID: exIDs["Diamond Sit Ups"], Reps: "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1"},
 				},
 			},
 		},
@@ -739,18 +812,26 @@ func BeginnerWorkoutDaySeed() {
 	day29 := models.WorkoutDay{
 		ProgramID:   programID,
 		DayNumber:   29,
-		Title:       "AMRAP & Mobility",
-		Description: "An optional mobility day or an AMRAP workout.",
+		Title:       "Recovery day & Optional workout",
+		Description: "Mobility AND/OR AMRAP (As many rounds as possible ) in 20 minutes. Track your rounds with the counter!",
 		WorkoutBlocks: []models.WorkoutBlock{
+			{
+				BlockType:   "Mobility",
+				BlockRounds: 1,
+				BlockNotes:  "A mobility session to stretch your tight muscle. Prevent injury and aid recovery",
+				Exercises: []models.WorkoutExercise{
+					{Order: 1, ExerciseID: exIDs["Mobility"]},
+				},
+			},
 			{
 				BlockType:   "AMRAP",
 				BlockRounds: 2,
-				BlockNotes:  "Complete as many reps as possible. 2 x 8 min work, 2 min rest in between.",
+				BlockNotes:  "20 minutes",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["High Knees"], Reps: "20"},
-					{Order: 2, ExerciseID: exIDs["Cross Jabs"], Reps: "20"},
+					{Order: 1, ExerciseID: exIDs["High Knees"], Reps: "20", Tips: "2 High Knees = 1 rep"},
+					{Order: 2, ExerciseID: exIDs["Cross Jabs"], Reps: "20", Tips: "2 Jabs = 1 rep"},
 					{Order: 3, ExerciseID: exIDs["Diamond Sit Ups"], Reps: "20"},
-					{Order: 4, ExerciseID: exIDs["Belt Kicks"], Reps: "20"},
+					{Order: 4, ExerciseID: exIDs["Belt Kicks"], Reps: "10", Tips: "2 Belt Kicks = 1 rep"},
 				},
 			},
 		},
@@ -761,19 +842,21 @@ func BeginnerWorkoutDaySeed() {
 	day30 := models.WorkoutDay{
 		ProgramID:   programID,
 		DayNumber:   30,
-		Title:       "FINAL FITNESS TEST",
-		Description: "Repeat the original assessment to measure progress.",
+		Title:       "FINAL FITNESS Assessment",
+		Description: "Complete this fitness assessment one more time and compare the results from Day 1.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:  "Fitness Assessment",
-				BlockNotes: "Complete original assessment and compare results.",
+				BlockNotes: "Push yourself as hard as you did on day 1 and note your improvements.",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Press Ups"], Reps: "Max Reps", Duration: "1 min", Rest: "2 mins"},
-					{Order: 2, ExerciseID: exIDs["Squats"], Reps: "Max Reps", Duration: "1 min", Rest: "2 mins"},
-					{Order: 3, ExerciseID: exIDs["Plank Hold"], Reps: "Max Time", Rest: "2 mins"},
-					{Order: 4, ExerciseID: exIDs["Burpees"], Reps: "Max Reps", Duration: "1 min", Rest: "2 mins"},
-					{Order: 5, ExerciseID: exIDs["Starjumps"], Reps: "Max Reps", Duration: "1 min", Rest: "2 mins"},
-					{Order: 6, ExerciseID: exIDs["Diamond Sit Ups"], Reps: "Max Reps", Duration: "1 min", Rest: "2 mins"},
+					{Order: 1, ExerciseID: exIDs["Press Ups"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
+					{Order: 2, ExerciseID: exIDs["Squats"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
+					{Order: 3, ExerciseID: exIDs["Plank Hold"], Reps: "Max Effort", Duration: "Max Time", Rest: "2 mins"},
+					{Order: 4, ExerciseID: exIDs["Burpees"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
+					{Order: 5, ExerciseID: exIDs["Starjumps"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
+					{Order: 6, ExerciseID: exIDs["Sit Ups"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
+					{Order: 7, ExerciseID: exIDs["Lunges"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins", Tips: "2 Lunges = 1 rep"},
+					{Order: 8, ExerciseID: exIDs["Tricep Dips (with Chair)"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
 				},
 			},
 		},

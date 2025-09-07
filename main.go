@@ -1,10 +1,9 @@
 package main
 
 import (
-	"log"
-
 	"github.com/88warren/lmw-fitness-backend/config"
 	"github.com/88warren/lmw-fitness-backend/database"
+	"go.uber.org/zap"
 )
 
 func init() {
@@ -13,6 +12,9 @@ func init() {
 }
 
 func main() {
+	database.InitLogger()
+	defer database.SyncLogger()
+
 	database.ConnectToDB()
 	db := database.GetDB()
 
@@ -21,9 +23,8 @@ func main() {
 	config.SetupHandlers(router, db)
 
 	port := config.GetEnv("PORT", "8082")
-	// fmt.Printf("Starting the server on port %s\n", port)
 
 	if err := router.Run("0.0.0.0:" + port); err != nil {
-		log.Fatal("Failed to start the server:", err)
+		zap.L().Fatal("Failed to start the server", zap.Error(err))
 	}
 }

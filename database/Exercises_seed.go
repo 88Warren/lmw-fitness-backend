@@ -386,7 +386,7 @@ func ExerciseSeed() {
 			Category:     "legs",
 			Description:  "A dynamic exercise combining a squat with a kick.",
 			Tips:         "After standing from the squat, kick with control. Alternate which leg you kick with.",
-			Instructions: "Perform a squat, and as you stand up, kick one leg forward or to the side.",
+			Instructions: "Perform a squat and as you stand up, kick one leg forward or to the side.",
 		},
 		{
 			VideoID:      "yqpG-qdXbSk",
