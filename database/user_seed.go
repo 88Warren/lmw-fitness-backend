@@ -2,6 +2,7 @@ package database
 
 import (
 	"log"
+	"time"
 
 	"github.com/88warren/lmw-fitness-backend/models"
 	"golang.org/x/crypto/bcrypt"
@@ -29,6 +30,8 @@ func seedAdminUser(db *gorm.DB) {
 		Role:               "admin",
 		MustChangePassword: false,
 		CompletedDays:      make(map[string]int),
+		ProgramStartDates:  make(map[string]time.Time),
+		CompletedDaysList:  make(map[string][]int),
 	}
 
 	var existingUser models.User
@@ -76,6 +79,14 @@ func seedGenericUser(db *gorm.DB) {
 			"beginner": 3,
 			"advanced": 1,
 		},
+		ProgramStartDates: map[string]time.Time{
+			"beginner": time.Now().AddDate(0, 0, -3), // Started 3 days ago
+			"advanced": time.Now().AddDate(0, 0, -1), // Started 1 day ago
+		},
+		CompletedDaysList: map[string][]int{
+			"beginner": {1, 2, 3},
+			"advanced": {1},
+		},
 	}
 
 	var existingUser models.User
@@ -96,6 +107,8 @@ func seedGenericUser(db *gorm.DB) {
 		existingUser.Role = "user"
 		existingUser.MustChangePassword = false
 		existingUser.CompletedDays = genericUser.CompletedDays
+		existingUser.ProgramStartDates = genericUser.ProgramStartDates
+		existingUser.CompletedDaysList = genericUser.CompletedDaysList
 		if err := db.Save(&existingUser).Error; err != nil {
 			log.Printf("Failed to update generic user '%s': %v", existingUser.Email, err)
 			return

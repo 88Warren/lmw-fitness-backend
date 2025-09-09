@@ -981,6 +981,7 @@ func ExerciseSeed() {
 		"Wide Arm Press Ups":       "Wide Arm Press Ups (on Knees)",
 		"Tricep Dips (with Chair)": "Tricep Dips (Floor)",
 		"Diamond Press Ups":        "Diamond Press Ups (on Knees)",
+		"Squat Jumps":              "Squats",
 		"Tuck Jumps":               "Squat Jumps",
 		"Explosive Starjumps":      "Starjumps",
 		"Press Up Twists":          "Press Up Twists (on Knees)",
@@ -989,12 +990,21 @@ func ExerciseSeed() {
 		"H.O.G. Press Ups":         "H.O.G. Press Ups (on Knees)",
 		"Bicycles":                 "Bicycle Legs",
 		"Bicycle Legs":             "Crunches",
+		"Sit Ups":                  "Half Sit Ups",
+		"Crunches":                 "Sit Ups",
 	}
 
+	// Create forward relationships (full → modified)
 	for original, modified := range modifications {
 		linkExerciseToModification(DB, original, modified, 1)
 	}
 	linkExerciseToModification(DB, "Tricep Dips (Floor)", "Diamond Press Ups", 2)
+
+	// Create reverse relationships (modified → full) for two-way toggling
+	log.Println("Creating reverse modification links for two-way toggling...")
+	for original, modified := range modifications {
+		linkExerciseToModification(DB, modified, original, 1)
+	}
 }
 
 func linkExerciseToModification(db *gorm.DB, originalName, modifiedName string, level int) {

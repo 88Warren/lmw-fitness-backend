@@ -70,10 +70,10 @@ func AdvancedWorkoutDaySeed() {
 					{Order: 1, ExerciseID: exIDs["Press Ups"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
 					{Order: 2, ExerciseID: exIDs["Straddle Sit Ups"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
 					{Order: 3, ExerciseID: exIDs["Plank Hold"], Reps: "Max Effort", Duration: "Max Time", Rest: "2 mins"},
-					{Order: 4, ExerciseID: exIDs["Squats"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
+					{Order: 4, ExerciseID: exIDs["Squat Jumps"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
 					{Order: 5, ExerciseID: exIDs["Burpees"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
 					{Order: 6, ExerciseID: exIDs["Jump Lunge"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins", Tips: "2 Lunges = 1 rep"},
-					{Order: 7, ExerciseID: exIDs["Starjumps"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
+					{Order: 7, ExerciseID: exIDs["Explosive Starjumps"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
 					{Order: 8, ExerciseID: exIDs["Thrusters"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
 				},
 			},
@@ -115,7 +115,7 @@ func AdvancedWorkoutDaySeed() {
 				BlockNotes:  "Complete 4 rounds of all 5 exercises for the given number of reps. Rest 90 seconds between rounds. Complete for workout as fast as you can.",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Squat Jumps"], Reps: "15"},
-					{Order: 2, ExerciseID: exIDs["Lunges"], Reps: "20", Tips: "2 Lunges = 1 rep"},
+					{Order: 2, ExerciseID: exIDs["Jump Lunge"], Reps: "20", Tips: "2 Lunges = 1 rep"},
 					{Order: 3, ExerciseID: exIDs["Broad Jumps"], Reps: "12"},
 					{Order: 4, ExerciseID: exIDs["Burpees"], Reps: "10"},
 					{Order: 5, ExerciseID: exIDs["Glute Bridges"], Duration: "30s"},
@@ -163,7 +163,7 @@ func AdvancedWorkoutDaySeed() {
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["High Knees"], Duration: "40s", Rest: "20s"},
 					{Order: 2, ExerciseID: exIDs["Burpees"], Duration: "40s", Rest: "20s"},
-					{Order: 3, ExerciseID: exIDs["Starjumps"], Duration: "40s", Rest: "20s"},
+					{Order: 3, ExerciseID: exIDs["Explosive Starjumps"], Duration: "40s", Rest: "20s"},
 					{Order: 4, ExerciseID: exIDs["Mountain Climbers"], Duration: "40s", Rest: "20s"},
 					{Order: 5, ExerciseID: exIDs["Sprints"], Duration: "40s", Rest: "20s"},
 					{Order: 6, ExerciseID: exIDs["Thrusters"], Duration: "40s", Rest: "20s"},
@@ -204,7 +204,7 @@ func AdvancedWorkoutDaySeed() {
 				BlockRounds: 8,
 				BlockNotes:  "20s work / 10s rest x 8 rounds",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Lunges"], Duration: "20s", Rest: "10s"},
+					{Order: 1, ExerciseID: exIDs["Jump Lunge"], Duration: "20s", Rest: "10s"},
 					{Order: 2, ExerciseID: exIDs["Ab Twists"], Duration: "20s", Rest: "10s"},
 				},
 			},
@@ -255,7 +255,7 @@ func AdvancedWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   8,
 		Title:       "Recovery day & Optional workout",
-		Description: " Mobility AND/OR Workout: EMOM.",
+		Description: " Mobility. Optional Workout: EMOM.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "Mobility",
@@ -270,8 +270,8 @@ func AdvancedWorkoutDaySeed() {
 				BlockRounds: 4,
 				BlockNotes:  "20 minutes",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, Instructions: "Minute 1", ExerciseID: exIDs["Squats"], Reps: "20"},
-					{Order: 2, Instructions: "Minute 2", ExerciseID: exIDs["Lunges"], Reps: "10", Tips: "2 Lunges = 1 rep"},
+					{Order: 1, Instructions: "Minute 1", ExerciseID: exIDs["Squat Jumps"], Reps: "20"},
+					{Order: 2, Instructions: "Minute 2", ExerciseID: exIDs["Jump Lunge"], Reps: "10", Tips: "2 Lunges = 1 rep"},
 					{Order: 3, Instructions: "Minute 3", ExerciseID: exIDs["Burpees"], Reps: "10"},
 					{Order: 4, Instructions: "Minute 4", ExerciseID: exIDs["Crunches"], Reps: "20"},
 					{Order: 5, Instructions: "Minute 5", ExerciseID: exIDs["Tricep Dips (with Chair)"], Reps: "15"},
@@ -312,7 +312,7 @@ func AdvancedWorkoutDaySeed() {
 				BlockNotes: "Complete all 4 exercise for the given number of reps. Complete the workout as fast as you can.",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Press Ups"], Reps: "100"},
-					{Order: 2, ExerciseID: exIDs["Tricep Dips (Floor)"], Reps: "75"},
+					{Order: 2, ExerciseID: exIDs["Tricep Dips (with Chair)"], Reps: "75"},
 					{Order: 3, ExerciseID: exIDs["High Low Plank"], Reps: "50"},
 					{Order: 4, ExerciseID: exIDs["Walkaways"], Reps: "25"},
 				},
@@ -420,7 +420,7 @@ func AdvancedWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   15,
 		Title:       "Recovery day & Optional workout",
-		Description: "Mobility AND/OR Workout: AMRAP & circuit.",
+		Description: "Mobility. Optional Workout: AMRAP & circuit.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "Mobility",
@@ -551,7 +551,7 @@ func AdvancedWorkoutDaySeed() {
 				BlockRounds: 6,
 				BlockNotes:  "20s work / 10s rest x 6 rounds",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Starjumps"], Duration: "20s", Rest: "10s"},
+					{Order: 1, ExerciseID: exIDs["Explosive Starjumps"], Duration: "20s", Rest: "10s"},
 					{Order: 2, ExerciseID: exIDs["Bicycle Legs"], Duration: "20s", Rest: "10s"},
 				},
 			},
@@ -602,7 +602,7 @@ func AdvancedWorkoutDaySeed() {
 					{Order: 2, ExerciseID: exIDs["Burpees"], Reps: "10"},
 					{Order: 3, ExerciseID: exIDs["Squat Twists"], Reps: "12"},
 					{Order: 4, ExerciseID: exIDs["Press Up Twists"], Reps: "14"},
-					{Order: 5, ExerciseID: exIDs["Starjumps"], Reps: "16"},
+					{Order: 5, ExerciseID: exIDs["Explosive Starjumps"], Reps: "16"},
 				},
 			},
 		},
@@ -619,7 +619,7 @@ func AdvancedWorkoutDaySeed() {
 				BlockType:  "For Time",
 				BlockNotes: "Complete all 4 exercises for the given number of reps. Complete the workout as fast as you can.",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Squats"], Reps: "200"},
+					{Order: 1, ExerciseID: exIDs["Squat Jumps"], Reps: "200"},
 					{Order: 2, ExerciseID: exIDs["Press Ups"], Reps: "150"},
 					{Order: 3, ExerciseID: exIDs["Burpees"], Reps: "100"},
 					{Order: 4, ExerciseID: exIDs["Tuck Jumps"], Reps: "50"},
@@ -633,7 +633,7 @@ func AdvancedWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   22,
 		Title:       "Recovery day & Optional workout",
-		Description: "Mobility AND/OR Workout: Pyramid & AMRAP Finisher ",
+		Description: "Mobility. Optional Workout: Pyramid & AMRAP Finisher ",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "Mobility",
@@ -686,7 +686,7 @@ func AdvancedWorkoutDaySeed() {
 				BlockNotes: "Pyramid V Press Ups: 15-10-5-10-15. Pyramid Half Sit Ups: 25-20-15-20-25.",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["V Press Ups"], Reps: "15, 10, 5, 10, 15"},
-					{Order: 2, ExerciseID: exIDs["Half Sit Ups"], Reps: "25, 20, 15, 20, 25"},
+					{Order: 2, ExerciseID: exIDs["Sit Ups"], Reps: "25, 20, 15, 20, 25"},
 				},
 			},
 			{
@@ -755,7 +755,7 @@ func AdvancedWorkoutDaySeed() {
 					{Order: 1, ExerciseID: exIDs["Plyo Press Ups"], Reps: "12"},
 					{Order: 2, ExerciseID: exIDs["Tuck Jumps"], Reps: "20"},
 					{Order: 3, ExerciseID: exIDs["H.O.G. Press Ups"], Reps: "12"},
-					{Order: 4, ExerciseID: exIDs["Starjumps"], Reps: "20"},
+					{Order: 4, ExerciseID: exIDs["Explosive Starjumps"], Reps: "20"},
 					{Order: 5, ExerciseID: exIDs["Moving Press Ups"], Reps: "12"},
 					{Order: 6, ExerciseID: exIDs["Ski Jumps"], Reps: "20"},
 					{Order: 7, ExerciseID: exIDs["Oblique Hops"], Reps: "12"},
@@ -847,7 +847,7 @@ func AdvancedWorkoutDaySeed() {
 				RoundRest:  "60s",
 				BlockNotes: "5 minutes",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Squats"], Reps: "Max"},
+					{Order: 1, ExerciseID: exIDs["Squat Jumps"], Reps: "Max"},
 				},
 			},
 			{
@@ -898,7 +898,7 @@ func AdvancedWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   29,
 		Title:       "Recovery day & Optional workout",
-		Description: "Mobility AND/OR Workout: A final finisher. Complete for time. Reps can be broken up or done in any order.",
+		Description: "Mobility. Optional Workout: A final finisher. Complete for time. Reps can be broken up or done in any order.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "Mobility",
@@ -912,7 +912,7 @@ func AdvancedWorkoutDaySeed() {
 				BlockType:  "For Time",
 				BlockNotes: "Complete all 5 exercises for the given number of reps. Complete for workout as fast as you can.",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Squats"], Reps: "200"},
+					{Order: 1, ExerciseID: exIDs["Squat Jumps"], Reps: "200"},
 					{Order: 2, ExerciseID: exIDs["Mountain Climbers"], Reps: "150"},
 					{Order: 3, ExerciseID: exIDs["Burpees"], Reps: "100"},
 					{Order: 4, ExerciseID: exIDs["Sit Ups"], Reps: "75"},
@@ -936,10 +936,10 @@ func AdvancedWorkoutDaySeed() {
 					{Order: 1, ExerciseID: exIDs["Press Ups"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
 					{Order: 2, ExerciseID: exIDs["Straddle Sit Ups"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
 					{Order: 3, ExerciseID: exIDs["Plank Hold"], Reps: "Max Effort", Duration: "Max Time", Rest: "2 mins"},
-					{Order: 4, ExerciseID: exIDs["Squats"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
+					{Order: 4, ExerciseID: exIDs["Squat Jumps"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
 					{Order: 5, ExerciseID: exIDs["Burpees"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
 					{Order: 6, ExerciseID: exIDs["Jump Lunge"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins", Tips: "2 Lunges = 1 rep"},
-					{Order: 7, ExerciseID: exIDs["Starjumps"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
+					{Order: 7, ExerciseID: exIDs["Explosive Starjumps"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
 					{Order: 8, ExerciseID: exIDs["Thrusters"], Reps: "Max Effort", Duration: "1 min", Rest: "2 mins"},
 				},
 			},

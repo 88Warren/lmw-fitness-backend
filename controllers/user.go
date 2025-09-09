@@ -217,6 +217,22 @@ func (uc *UserController) GetProfile(ctx *gin.Context) {
 		completedDays = make(map[string]int)
 	}
 
+	programStartDates := user.ProgramStartDates
+	if programStartDates == nil {
+		programStartDates = make(map[string]time.Time)
+	}
+
+	completedDaysList := user.CompletedDaysList
+	if completedDaysList == nil {
+		completedDaysList = make(map[string][]int)
+	}
+
+	// Calculate unlocked days for each program
+	unlockedDays := make(map[string]int)
+	for program, startDate := range programStartDates {
+		unlockedDays[program] = calculateUnlockedDays(startDate)
+	}
+
 	// log.Printf("Final program list being sent to frontend: %v", programList)
 
 	userResponse := models.UserResponse{
@@ -226,9 +242,32 @@ func (uc *UserController) GetProfile(ctx *gin.Context) {
 		MustChangePassword: user.MustChangePassword,
 		PurchasedPrograms:  programList, // Use the computed program list
 		CompletedDays:      completedDays,
+		ProgramStartDates:  programStartDates,
+		CompletedDaysList:  completedDaysList,
+		UnlockedDays:       unlockedDays,
 	}
 
 	ctx.JSON(http.StatusOK, userResponse)
+}
+
+// Helper function to calculate unlocked days based on program start date
+func calculateUnlockedDays(startDate time.Time) int {
+	if startDate.IsZero() {
+		return 0 // Program not started
+	}
+
+	now := time.Now()
+	daysSinceStart := int(now.Sub(startDate).Hours() / 24)
+
+	// User can access day 1 immediately, then one more day each calendar day
+	unlockedDays := daysSinceStart + 1
+
+	// Cap at 30 days maximum
+	if unlockedDays > 30 {
+		unlockedDays = 30
+	}
+
+	return unlockedDays
 }
 
 type ChangePasswordRequest struct {

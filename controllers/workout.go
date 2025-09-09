@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/88warren/lmw-fitness-backend/models"
 	"github.com/gin-gonic/gin"
@@ -282,13 +283,37 @@ func (wc *WorkoutController) CompleteWorkoutDay(c *gin.Context) {
 		return
 	}
 
-	// Update user's completed days for this program
-	// Initialize completedDays if nil
+	// Initialize maps if nil
 	if user.CompletedDays == nil {
 		user.CompletedDays = make(map[string]int)
 	}
+	if user.ProgramStartDates == nil {
+		user.ProgramStartDates = make(map[string]time.Time)
+	}
+	if user.CompletedDaysList == nil {
+		user.CompletedDaysList = make(map[string][]int)
+	}
 
-	// Update the completed day for this program (only if it's higher than current)
+	// Set program start date if this is day 1 or if not set
+	if req.DayNumber == 1 || user.ProgramStartDates[req.ProgramName].IsZero() {
+		user.ProgramStartDates[req.ProgramName] = time.Now()
+	}
+
+	// Add day to completed list if not already completed
+	completedList := user.CompletedDaysList[req.ProgramName]
+	dayAlreadyCompleted := false
+	for _, day := range completedList {
+		if day == req.DayNumber {
+			dayAlreadyCompleted = true
+			break
+		}
+	}
+
+	if !dayAlreadyCompleted {
+		user.CompletedDaysList[req.ProgramName] = append(completedList, req.DayNumber)
+	}
+
+	// Update the highest completed day (for backward compatibility)
 	currentCompleted := user.CompletedDays[req.ProgramName]
 	if req.DayNumber > currentCompleted {
 		user.CompletedDays[req.ProgramName] = req.DayNumber

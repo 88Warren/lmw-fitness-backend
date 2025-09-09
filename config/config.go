@@ -50,6 +50,12 @@ func GetEnv(key string, fallback string) string {
 
 func SetupServer() *gin.Engine {
 	router := gin.Default()
+
+	// Add monitoring and logging middleware
+	router.Use(middleware.StructuredLoggingMiddleware())
+	router.Use(middleware.MetricsMiddleware())
+	router.Use(middleware.MetricsCollectionMiddleware())
+
 	router.Use(middleware.CORSMiddleware())
 	router.Static("/images", "./images")
 	router.GET("/debug/images", func(c *gin.Context) {
@@ -68,6 +74,10 @@ func SetupServer() *gin.Engine {
 		c.JSON(http.StatusOK, gin.H{"files": filenames})
 	})
 	router.Use(middleware.DBMiddleware())
+
+	// Start metrics logging
+	middleware.LogMetricsPeriodically()
+
 	return router
 }
 
@@ -84,6 +94,7 @@ func SetupHandlers(router *gin.Engine, db *gorm.DB) {
 	userController := controllers.NewUserController(db)
 	newsletterController := controllers.NewNewsletterController(db)
 	workoutController := controllers.NewWorkoutController(db)
+	monitoringController := controllers.NewMonitoringController(db)
 
 	routes.RegisterHomeRoutes(router, homeController)
 	routes.RegisterHealthRoutes(router, healthController)
@@ -92,6 +103,7 @@ func SetupHandlers(router *gin.Engine, db *gorm.DB) {
 	routes.RegisterUserRoutes(router, userController)
 	routes.RegisterNewsletterRoutes(router, newsletterController)
 	routes.RegisterWorkoutRoutes(router, workoutController)
+	routes.RegisterMonitoringRoutes(router, monitoringController)
 
 	// Start the payment processing worker in a goroutine
 	go func() {
