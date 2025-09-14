@@ -51,7 +51,6 @@ func GetEnv(key string, fallback string) string {
 func SetupServer() *gin.Engine {
 	router := gin.Default()
 
-	// Add monitoring and logging middleware
 	router.Use(middleware.StructuredLoggingMiddleware())
 	router.Use(middleware.MetricsMiddleware())
 	router.Use(middleware.MetricsCollectionMiddleware())
@@ -75,14 +74,12 @@ func SetupServer() *gin.Engine {
 	})
 	router.Use(middleware.DBMiddleware())
 
-	// Start metrics logging
 	middleware.LogMetricsPeriodically()
 
 	return router
 }
 
 func SetupHandlers(router *gin.Engine, db *gorm.DB) {
-	// Run database migration
 	database.MigrateDB()
 	database.SeedDB(db)
 	// log.Println("Database models auto-migrated successfully.")
@@ -105,7 +102,6 @@ func SetupHandlers(router *gin.Engine, db *gorm.DB) {
 	routes.RegisterWorkoutRoutes(router, workoutController)
 	routes.RegisterMonitoringRoutes(router, monitoringController)
 
-	// Start the payment processing worker in a goroutine
 	go func() {
 		workers.StartPaymentWorker(db, paymentController)
 	}()

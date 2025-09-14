@@ -52,7 +52,6 @@ func (uc *UserController) RegisterUser(ctx *gin.Context) {
 		return
 	}
 
-	// Check if user with this email already exists
 	var existingUser models.User
 	if err := uc.DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
 		ctx.JSON(http.StatusConflict, gin.H{"error": "User with this email already exists"})
@@ -62,19 +61,20 @@ func (uc *UserController) RegisterUser(ctx *gin.Context) {
 		return
 	}
 
-	// Hash the password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
 		return
 	}
 
-	// Create new user
 	user := models.User{
 		Email:              req.Email,
 		PasswordHash:       string(hashedPassword),
 		Role:               "user",
 		MustChangePassword: true,
+		CompletedDays:      make(map[string]int),
+		ProgramStartDates:  make(map[string]time.Time),
+		CompletedDaysList:  make(map[string][]int),
 	}
 
 	if result := uc.DB.Create(&user); result.Error != nil {
@@ -82,7 +82,10 @@ func (uc *UserController) RegisterUser(ctx *gin.Context) {
 		return
 	}
 
-	// Generate JWT token for the newly registered user
+	if err := uc.initializeProgramAccess(&user); err != nil {
+		log.Printf("Failed to initialize program access for user %s: %v", user.Email, err)
+	}
+
 	token, err := uc.GenerateJWT(user.ID, user.Email, user.Role)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
@@ -101,6 +104,48 @@ func (uc *UserController) RegisterUser(ctx *gin.Context) {
 	})
 }
 
+func (uc *UserController) initializeProgramAccess(user *models.User) error {
+	var programs []models.WorkoutProgram
+	if err := uc.DB.Find(&programs).Error; err != nil {
+		return fmt.Errorf("failed to fetch programs: %v", err)
+	}
+
+	if user.CompletedDays == nil {
+		user.CompletedDays = make(map[string]int)
+	}
+	if user.ProgramStartDates == nil {
+		user.ProgramStartDates = make(map[string]time.Time)
+	}
+	if user.CompletedDaysList == nil {
+		user.CompletedDaysList = make(map[string][]int)
+	}
+
+	for _, program := range programs {
+		user.CompletedDays[program.Name] = 0
+		user.ProgramStartDates[program.Name] = time.Now()
+		user.CompletedDaysList[program.Name] = []int{}
+
+		userProgram := models.UserProgram{
+			UserID:    user.ID,
+			ProgramID: program.ID,
+		}
+
+		var existingUserProgram models.UserProgram
+		result := uc.DB.Where("user_id = ? AND program_id = ?", user.ID, program.ID).First(&existingUserProgram)
+		if result.Error == gorm.ErrRecordNotFound {
+			if err := uc.DB.Create(&userProgram).Error; err != nil {
+				log.Printf("Failed to create user-program association for user %d, program %d: %v", user.ID, program.ID, err)
+			}
+		}
+	}
+
+	if err := uc.DB.Save(user).Error; err != nil {
+		return fmt.Errorf("failed to save user program access: %v", err)
+	}
+
+	return nil
+}
+
 func (uc *UserController) LoginUser(ctx *gin.Context) {
 	var req models.LoginRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -108,7 +153,6 @@ func (uc *UserController) LoginUser(ctx *gin.Context) {
 		return
 	}
 
-	// Find user by email
 	var user models.User
 	if result := uc.DB.Preload("AuthTokens").Where("email = ?", req.Email).First(&user); result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
@@ -122,18 +166,16 @@ func (uc *UserController) LoginUser(ctx *gin.Context) {
 	// log.Printf("Stored Hashed Password for %s: %s", user.Email, user.PasswordHash)
 	// log.Printf("Login attempt plaintext password: %s", req.Password)
 
-	// Compare provided password with hashed password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
 
-	// Generate JWT token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"user_id": user.ID,
 		"email":   user.Email,
 		"role":    user.Role,
-		"exp":     time.Now().Add(time.Hour * 24).Unix(), // 24 hour expiration
+		"exp":     time.Now().Add(time.Hour * 24).Unix(),
 	})
 
 	jwtSecret := os.Getenv("JWT_SECRET")
@@ -188,7 +230,6 @@ func (uc *UserController) GetProfile(ctx *gin.Context) {
 	}
 
 	var user models.User
-	// Preload the nested UserPrograms -> WorkoutProgram relationship
 	if result := uc.DB.Preload("UserPrograms.WorkoutProgram").First(&user, userID); result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
@@ -198,7 +239,6 @@ func (uc *UserController) GetProfile(ctx *gin.Context) {
 		return
 	}
 
-	// Build program list from UserPrograms (relational data)
 	purchasedPrograms := make(map[string]bool)
 	for _, userProgram := range user.UserPrograms {
 		if userProgram.WorkoutProgram.Name != "" {
@@ -206,7 +246,6 @@ func (uc *UserController) GetProfile(ctx *gin.Context) {
 		}
 	}
 
-	// Convert map to slice
 	programList := make([]string, 0, len(purchasedPrograms))
 	for program := range purchasedPrograms {
 		programList = append(programList, program)
@@ -227,7 +266,6 @@ func (uc *UserController) GetProfile(ctx *gin.Context) {
 		completedDaysList = make(map[string][]int)
 	}
 
-	// Calculate unlocked days for each program
 	unlockedDays := make(map[string]int)
 	for program, startDate := range programStartDates {
 		unlockedDays[program] = calculateUnlockedDays(startDate)
@@ -240,7 +278,7 @@ func (uc *UserController) GetProfile(ctx *gin.Context) {
 		Email:              user.Email,
 		Role:               user.Role,
 		MustChangePassword: user.MustChangePassword,
-		PurchasedPrograms:  programList, // Use the computed program list
+		PurchasedPrograms:  programList,
 		CompletedDays:      completedDays,
 		ProgramStartDates:  programStartDates,
 		CompletedDaysList:  completedDaysList,
@@ -250,19 +288,15 @@ func (uc *UserController) GetProfile(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, userResponse)
 }
 
-// Helper function to calculate unlocked days based on program start date
 func calculateUnlockedDays(startDate time.Time) int {
 	if startDate.IsZero() {
-		return 0 // Program not started
+		return 0
 	}
 
 	now := time.Now()
 	daysSinceStart := int(now.Sub(startDate).Hours() / 24)
-
-	// User can access day 1 immediately, then one more day each calendar day
 	unlockedDays := daysSinceStart + 1
 
-	// Cap at 30 days maximum
 	if unlockedDays > 30 {
 		unlockedDays = 30
 	}
@@ -289,19 +323,16 @@ func (uc *UserController) ChangePassword(ctx *gin.Context) {
 		return
 	}
 
-	// 1. Validate new password complexity
 	if err := ValidatePassword(req.NewPassword); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// 2. Check if new password matches confirmation
 	if req.NewPassword != req.ConfirmNewPassword {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "New password and confirmation do not match."})
 		return
 	}
 
-	// 3. Find the user
 	var user models.User
 	if result := uc.DB.First(&user, userID); result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
@@ -312,13 +343,11 @@ func (uc *UserController) ChangePassword(ctx *gin.Context) {
 		return
 	}
 
-	// 4. Verify old password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.OldPassword)); err != nil {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Incorrect old password."})
 		return
 	}
 
-	// 5. Prevent using the same password as the old one (if it was a different hash)
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.NewPassword)); err == nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "New password cannot be the same as your old password."})
 		return
@@ -328,14 +357,12 @@ func (uc *UserController) ChangePassword(ctx *gin.Context) {
 		return
 	}
 
-	// 6. Hash the new password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash new password."})
 		return
 	}
 
-	// 7. Update user's password and set MustChangePassword to false
 	user.PasswordHash = string(hashedPassword)
 	user.MustChangePassword = false
 
@@ -392,7 +419,6 @@ func (uc *UserController) RequestPasswordReset(ctx *gin.Context) {
 		return
 	}
 
-	// 1. Generate a unique, time-limited token
 	token, err := generateSecureToken(32)
 	if err != nil {
 		log.Printf("Error generating reset token: %v", err)
@@ -402,7 +428,6 @@ func (uc *UserController) RequestPasswordReset(ctx *gin.Context) {
 
 	expiresAt := time.Now().Add(time.Hour * 12)
 
-	// 2. Save token to database, invalidate any existing tokens for this user
 	uc.DB.Where("user_id = ?", user.ID).Delete(&models.PasswordResetToken{})
 
 	resetToken := models.PasswordResetToken{
@@ -417,7 +442,6 @@ func (uc *UserController) RequestPasswordReset(ctx *gin.Context) {
 		return
 	}
 
-	// 3. Send email with reset link
 	resetLink := fmt.Sprintf("%s/reset-password/%s", os.Getenv("ALLOWED_ORIGIN"), token)
 	emailSubject := "LMW Fitness - Password Reset Request"
 	emailBody := emailtemplates.GeneratePasswordResetEmailBody(user.Email, resetLink)
@@ -493,13 +517,11 @@ func (uc *UserController) ResetPassword(ctx *gin.Context) {
 		return
 	}
 
-	// 1. Password complexity validation (Perform this early)
 	if err := ValidatePassword(req.NewPassword); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// 2. Find and validate the token
 	var resetToken models.PasswordResetToken
 	if result := uc.DB.Where("token = ?", req.Token).First(&resetToken); result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
@@ -516,7 +538,6 @@ func (uc *UserController) ResetPassword(ctx *gin.Context) {
 		return
 	}
 
-	// 3. Find the user associated with the token
 	var user models.User
 	if result := uc.DB.First(&user, resetToken.UserID); result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
@@ -527,7 +548,6 @@ func (uc *UserController) ResetPassword(ctx *gin.Context) {
 		return
 	}
 
-	// 4. Prevent using the same password as the old one
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.NewPassword)); err == nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "New password cannot be the same as your old password."})
 		return
@@ -537,7 +557,6 @@ func (uc *UserController) ResetPassword(ctx *gin.Context) {
 		return
 	}
 
-	// 5. Hash the new password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash new password."})
@@ -546,7 +565,6 @@ func (uc *UserController) ResetPassword(ctx *gin.Context) {
 
 	// log.Printf("New Hashed Password for user %d: %s", user.ID, string(hashedPassword))
 
-	// 6. Update the user's password in the database
 	user.PasswordHash = string(hashedPassword)
 	if result := uc.DB.Save(&user); result.Error != nil {
 		log.Printf("Error updating user password: %v", result.Error)
@@ -554,7 +572,6 @@ func (uc *UserController) ResetPassword(ctx *gin.Context) {
 		return
 	}
 
-	// 7. Invalidate (delete) the token after successful use
 	uc.DB.Delete(&resetToken)
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "Your password has been reset successfully!"})
@@ -602,7 +619,6 @@ func (uc *UserController) VerifyWorkoutToken(ctx *gin.Context) {
 	// log.Printf("Token being verified: %s", req.Token)
 
 	var authToken models.AuthToken
-	// Find the token and ensure it has not been used
 	if err := uc.DB.Where("token = ? AND is_used = ?", req.Token, false).First(&authToken).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
@@ -615,11 +631,9 @@ func (uc *UserController) VerifyWorkoutToken(ctx *gin.Context) {
 
 	// log.Printf("Found valid unused token for user ID: %d", authToken.UserID)
 
-	// Mark the token as used to prevent replay attacks
 	authToken.IsUsed = true
 	uc.DB.Save(&authToken)
 
-	// Retrieve the user associated with the token
 	var user models.User
 	if err := uc.DB.Preload("UserPrograms.WorkoutProgram").First(&user, authToken.UserID).Error; err != nil {
 		log.Printf("Error finding user %d: %v", authToken.UserID, err)
@@ -627,7 +641,6 @@ func (uc *UserController) VerifyWorkoutToken(ctx *gin.Context) {
 		return
 	}
 
-	// Now, build the purchased programs list from the preloaded UserPrograms
 	purchasedPrograms := make(map[string]bool)
 	for _, userProgram := range user.UserPrograms {
 		if userProgram.WorkoutProgram.Name != "" {
@@ -642,7 +655,6 @@ func (uc *UserController) VerifyWorkoutToken(ctx *gin.Context) {
 
 	// log.Printf("Program list being sent: %v", programList)
 
-	// Generate JWT token
 	tokenString, err := uc.GenerateJWT(user.ID, user.Email, user.Role)
 	if err != nil {
 		log.Printf("Failed to generate JWT for user %d: %v", user.ID, err)
@@ -683,19 +695,16 @@ func (uc *UserController) SetFirstTimePassword(ctx *gin.Context) {
 		return
 	}
 
-	// 1. Validate new password complexity
 	if err := ValidatePassword(req.NewPassword); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// 2. Check if new password matches confirmation
 	if req.NewPassword != req.ConfirmNewPassword {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "New password and confirmation do not match."})
 		return
 	}
 
-	// 3. Find the user
 	var user models.User
 	if result := uc.DB.First(&user, userID); result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
@@ -706,13 +715,11 @@ func (uc *UserController) SetFirstTimePassword(ctx *gin.Context) {
 		return
 	}
 
-	// 4. Verify this is a first-time user
 	if !user.MustChangePassword {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "This endpoint is only for first-time password setup."})
 		return
 	}
 
-	// 5. Hash the new password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash new password."})
@@ -721,7 +728,6 @@ func (uc *UserController) SetFirstTimePassword(ctx *gin.Context) {
 
 	// log.Printf("User before update: MustChangePassword=%v", user.MustChangePassword)
 
-	// 6. Update user's password and set MustChangePassword to false
 	user.PasswordHash = string(hashedPassword)
 	user.MustChangePassword = false
 

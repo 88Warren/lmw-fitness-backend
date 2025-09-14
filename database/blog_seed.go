@@ -19,9 +19,9 @@ func BlogSeed(db *gorm.DB) {
 	blogConfigs := []blogSeedConfig{
 		{
 			IsFeatured: true,
-			Category:   "Motivation",
+			Category:   "Miscellaneous",
 			FileName:   "welcome.html",
-			ImageURL:   "https://placehold.co/1200x600/ffcf00/FFF?text=Welcome+to+LMW+Fitness",
+			ImageURL:   "https://images.pexels.com/photos/6185236/pexels-photo-6185236.jpeg?_gl=1*1auz0rg*_ga*MTM3OTk1NTgzOS4xNzU2MzI3MTY2*_ga_8JE65Q40S6*czE3NTc3NTQ2OTgkbzYkZzEkdDE3NTc3NTQ5MDYkajU3JGwwJGgw",
 		},
 		{
 			IsFeatured: false,

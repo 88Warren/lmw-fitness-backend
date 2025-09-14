@@ -12,21 +12,16 @@ import (
 )
 
 func TestHealthEndpoint(t *testing.T) {
-	// Setup router
 	router := config.SetupServer()
 
-	// Setup health controller and routes
 	healthController := controllers.NewHealthController(GetTestDB())
 	routes.RegisterHealthRoutes(router, healthController)
 
-	// Create test request
 	req, _ := http.NewRequest("GET", "/api/health", nil)
 	w := httptest.NewRecorder()
 
-	// Perform request
 	router.ServeHTTP(w, req)
 
-	// Assertions
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), "status")
 }
@@ -35,7 +30,6 @@ func TestDatabaseHealthCheck(t *testing.T) {
 	db := GetTestDB()
 	assert.NotNil(t, db)
 
-	// Test database connection
 	sqlDB, err := db.DB()
 	assert.NoError(t, err)
 

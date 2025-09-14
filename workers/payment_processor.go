@@ -86,15 +86,6 @@ func (jp *JobProcessor) processPendingJobs() {
 		return
 	}
 
-	// var allJobs []models.Job
-	// if allResult := jp.db.Find(&allJobs); allResult.Error == nil {
-	// 	log.Printf("Total jobs in database: %d", len(allJobs))
-	// 	for _, job := range allJobs {
-	// 		log.Printf("Job: ID=%d, Session=%s, Email=%s, Status=%s, Attempts=%d",
-	// 			job.ID, job.SessionID, job.CustomerEmail, job.Status, job.Attempts)
-	// 	}
-	// }
-
 	if len(jobs) == 0 {
 		// log.Printf("No pending jobs found")
 		return

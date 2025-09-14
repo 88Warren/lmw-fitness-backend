@@ -14,7 +14,6 @@ func AdvancedWorkoutDaySeed() {
 		log.Fatalf("Failed to find '30-Day Advanced Program': %v", err)
 	}
 
-	// Fetch all necessary exercise IDs upfront for efficiency
 	exIDs := make(map[string]uint)
 	exercises := []string{
 		"Ab Twists", "Bearcrawls", "Belt Kicks", "Bicycle Legs", "Bicycles", "Broad Jumps",
@@ -39,19 +38,15 @@ func AdvancedWorkoutDaySeed() {
 		exIDs[name] = id
 	}
 
-	// Helper function to create a workout day and handle errors for ADVANCED program
 	createWorkoutDay := func(day models.WorkoutDay) {
 		var existingDay models.WorkoutDay
 		if err := DB.Where("program_id = ? AND day_number = ?", day.ProgramID, day.DayNumber).First(&existingDay).Error; err == nil {
-			// Log for advanced program
 			log.Printf("Advanced Program - Day %d already exists, skipping creation.", day.DayNumber)
 			return
 		}
 		if err := DB.Create(&day).Error; err != nil {
-			// Log for advanced program
 			log.Printf("Failed to create Advanced Program - Day %d: %v", day.DayNumber, err)
 		} else {
-			// Log for advanced program
 			log.Printf("Successfully created Advanced Program - Day %d: %s", day.DayNumber, day.Title)
 		}
 	}
@@ -85,17 +80,17 @@ func AdvancedWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   2,
 		Title:       "Upper Body Power",
-		Description: "Every Minute on the Minute (EMOM), complete the number of reps within the minute. Faster you complete the more rest.",
+		Description: "Every Minute on the Minute (EMOM) Complete the following reps within a minute. The quicker yu do them, the more rest you get",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "EMOM",
 				BlockRounds: 5,
 				BlockNotes:  "20 minutes",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, Instructions: "Minute 1", ExerciseID: exIDs["Wide Arm Press Ups"], Reps: "15"},
-					{Order: 2, Instructions: "Minute 2", ExerciseID: exIDs["Tricep Dips (with Chair)"], Reps: "10"},
-					{Order: 3, Instructions: "Minute 3", ExerciseID: exIDs["Plank Shoulder Taps"], Reps: "30", Tips: "2 Taps = 1 rep"},
-					{Order: 4, Instructions: "Minute 4", ExerciseID: exIDs["Plyo Press Ups"], Reps: "10"},
+					{Order: 1, ExerciseID: exIDs["Wide Arm Press Ups"], Reps: "15"},
+					{Order: 2, ExerciseID: exIDs["Tricep Dips (with Chair)"], Reps: "10"},
+					{Order: 3, ExerciseID: exIDs["Plank Shoulder Taps"], Reps: "30", Tips: "2 Taps = 1 rep"},
+					{Order: 4, ExerciseID: exIDs["Plyo Press Ups"], Reps: "10"},
 				},
 			},
 		},
@@ -270,11 +265,11 @@ func AdvancedWorkoutDaySeed() {
 				BlockRounds: 4,
 				BlockNotes:  "20 minutes",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, Instructions: "Minute 1", ExerciseID: exIDs["Squat Jumps"], Reps: "20"},
-					{Order: 2, Instructions: "Minute 2", ExerciseID: exIDs["Jump Lunge"], Reps: "10", Tips: "2 Lunges = 1 rep"},
-					{Order: 3, Instructions: "Minute 3", ExerciseID: exIDs["Burpees"], Reps: "10"},
-					{Order: 4, Instructions: "Minute 4", ExerciseID: exIDs["Crunches"], Reps: "20"},
-					{Order: 5, Instructions: "Minute 5", ExerciseID: exIDs["Tricep Dips (with Chair)"], Reps: "15"},
+					{Order: 1, ExerciseID: exIDs["Squat Jumps"], Reps: "20"},
+					{Order: 2, ExerciseID: exIDs["Jump Lunge"], Reps: "10", Tips: "2 Lunges = 1 rep"},
+					{Order: 3, ExerciseID: exIDs["Burpees"], Reps: "10"},
+					{Order: 4, ExerciseID: exIDs["Crunches"], Reps: "20"},
+					{Order: 5, ExerciseID: exIDs["Tricep Dips (with Chair)"], Reps: "15"},
 				},
 			},
 		},
@@ -325,16 +320,16 @@ func AdvancedWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   11,
 		Title:       "Core Focus & Full Body Burst",
-		Description: "Every Minute on the Minute (EMOM), complete the number of reps within the minute. Followed by a For Time workout.",
+		Description: "Every Minute on the Minute (EMOM) Complete the following reps within a minute. The quicker yu do them, the more rest you get",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "EMOM",
 				BlockRounds: 4,
 				BlockNotes:  "12 minutes",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, Instructions: "Minute 1", ExerciseID: exIDs["Flutter Kicks"], Reps: "30", Tips: "2 Kicks = 1 rep"},
-					{Order: 2, Instructions: "Minute 2", ExerciseID: exIDs["Leg Raises"], Reps: "20"},
-					{Order: 3, Instructions: "Minute 3", ExerciseID: exIDs["Jack Knife"], Reps: "10"},
+					{Order: 1, ExerciseID: exIDs["Flutter Kicks"], Reps: "30", Tips: "2 Kicks = 1 rep"},
+					{Order: 2, ExerciseID: exIDs["Leg Raises"], Reps: "20"},
+					{Order: 3, ExerciseID: exIDs["Jack Knife"], Reps: "10"},
 				},
 			},
 			{
@@ -355,16 +350,16 @@ func AdvancedWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   12,
 		Title:       "Core Domination",
-		Description: "Every Minute on the Minute (EMOM), complete the number of reps within the minute. Faster you complete the more rest",
+		Description: "Every Minute on the Minute (EMOM) Complete the following reps within a minute. The quicker yu do them, the more rest you get",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "EMOM",
 				BlockRounds: 7,
 				BlockNotes:  "21 minutes",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, Instructions: "Minute 1", ExerciseID: exIDs["Crunches"], Reps: "20"},
-					{Order: 2, Instructions: "Minute 2", ExerciseID: exIDs["Leg Raises"], Reps: "15"},
-					{Order: 3, Instructions: "Minute 3", ExerciseID: exIDs["Plank Hold"], Duration: "40s"},
+					{Order: 1, ExerciseID: exIDs["Crunches"], Reps: "20"},
+					{Order: 2, ExerciseID: exIDs["Leg Raises"], Reps: "15"},
+					{Order: 3, ExerciseID: exIDs["Plank Hold"], Duration: "40s"},
 				},
 			},
 		},
@@ -483,19 +478,19 @@ func AdvancedWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   17,
 		Title:       "Upper Body Strength & Endurance",
-		Description: "Every Minute on the Minute (EMOM), complete the number of reps within the minute. Faster you complete the more rest",
+		Description: "Every Minute on the Minute (EMOM) Complete the following reps within a minute. The quicker yu do them, the more rest you get",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "EMOM",
 				BlockRounds: 4,
 				BlockNotes:  "24 minutes",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, Instructions: "Minute 1", ExerciseID: exIDs["Diamond Sit Ups"], Reps: "20"},
-					{Order: 2, Instructions: "Minute 2", ExerciseID: exIDs["Press Ups"], Reps: "20"},
-					{Order: 3, Instructions: "Minute 3", ExerciseID: exIDs["Plank Hold"], Duration: "40s"},
-					{Order: 4, Instructions: "Minute 4", ExerciseID: exIDs["Tricep Dips (with Chair)"], Reps: "20"},
-					{Order: 5, Instructions: "Minute 5", ExerciseID: exIDs["Straddle Sit Ups"], Reps: "20"},
-					{Order: 6, Instructions: "Minute 6", ExerciseID: exIDs["Overhead Jabs (Fast)"], Reps: "20", Tips: "2 Jabs = 1 rep"},
+					{Order: 1, ExerciseID: exIDs["Diamond Sit Ups"], Reps: "20"},
+					{Order: 2, ExerciseID: exIDs["Press Ups"], Reps: "20"},
+					{Order: 3, ExerciseID: exIDs["Plank Hold"], Duration: "40s"},
+					{Order: 4, ExerciseID: exIDs["Tricep Dips (with Chair)"], Reps: "20"},
+					{Order: 5, ExerciseID: exIDs["Straddle Sit Ups"], Reps: "20"},
+					{Order: 6, ExerciseID: exIDs["Overhead Jabs (Fast)"], Reps: "20", Tips: "2 Jabs = 1 rep"},
 				},
 			},
 		},

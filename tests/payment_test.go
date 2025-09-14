@@ -15,7 +15,6 @@ import (
 )
 
 func TestCreateCheckoutSession(t *testing.T) {
-	// Skip if no Stripe key (for CI/CD)
 	if os.Getenv("STRIPE_SECRET_KEY") == "" {
 		t.Skip("Skipping Stripe test - no API key")
 	}
@@ -24,7 +23,6 @@ func TestCreateCheckoutSession(t *testing.T) {
 	paymentController := controllers.NewPaymentController(GetTestDB())
 	routes.RegisterPaymentRoutes(router, paymentController)
 
-	// Test data
 	requestBody := map[string]interface{}{
 		"priceId": "price_test_123",
 		"email":   "test@example.com",
@@ -37,7 +35,6 @@ func TestCreateCheckoutSession(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	// Should return 400 for invalid price ID in test mode
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
@@ -45,8 +42,6 @@ func TestPaymentValidation(t *testing.T) {
 	router := config.SetupServer()
 	paymentController := controllers.NewPaymentController(GetTestDB())
 	routes.RegisterPaymentRoutes(router, paymentController)
-
-	// Test missing email
 	requestBody := map[string]interface{}{
 		"priceId": "price_test_123",
 	}

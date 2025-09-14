@@ -48,13 +48,8 @@ type MemoryStats struct {
 var startTime = time.Now()
 
 func (mc *MonitoringController) HealthCheck(c *gin.Context) {
-	// Check database health
 	dbHealth := mc.checkDatabaseHealth()
-
-	// Get system metrics
 	systemHealth := mc.getSystemHealth()
-
-	// Get application metrics
 	metrics := middleware.GetMetrics()
 
 	status := "healthy"
@@ -65,7 +60,7 @@ func (mc *MonitoringController) HealthCheck(c *gin.Context) {
 	response := HealthResponse{
 		Status:    status,
 		Timestamp: time.Now(),
-		Version:   "1.0.0", // You can make this dynamic
+		Version:   "1.0.0",
 		Database:  dbHealth,
 		System:    systemHealth,
 		Metrics:   metrics,
@@ -115,8 +110,8 @@ func (mc *MonitoringController) getSystemHealth() SystemHealth {
 
 	return SystemHealth{
 		Memory: MemoryStats{
-			Allocated: m.Alloc / 1024 / 1024, // Convert to MB
-			System:    m.Sys / 1024 / 1024,   // Convert to MB
+			Allocated: m.Alloc / 1024 / 1024,
+			System:    m.Sys / 1024 / 1024,
 			GCRuns:    m.NumGC,
 		},
 		Goroutines: runtime.NumGoroutine(),
@@ -124,9 +119,7 @@ func (mc *MonitoringController) getSystemHealth() SystemHealth {
 	}
 }
 
-// ReadinessCheck for Kubernetes readiness probe
 func (mc *MonitoringController) ReadinessCheck(c *gin.Context) {
-	// Check if database is ready
 	sqlDB, err := mc.DB.DB()
 	if err != nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
@@ -150,7 +143,6 @@ func (mc *MonitoringController) ReadinessCheck(c *gin.Context) {
 	})
 }
 
-// LivenessCheck for Kubernetes liveness probe
 func (mc *MonitoringController) LivenessCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":    "alive",

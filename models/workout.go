@@ -33,7 +33,7 @@ type WorkoutBlock struct {
 	DayID       uint              `gorm:"not null" json:"dayId"`
 	BlockType   string            `gorm:"not null" json:"blockType"`
 	BlockRounds int               `json:"blockRounds"`
-	RoundRest   string            `json:"roundRest"` // Rest time between rounds (e.g., "60s")
+	RoundRest   string            `json:"roundRest"`
 	BlockNotes  string            `json:"blockNotes"`
 	Exercises   []WorkoutExercise `gorm:"foreignKey:BlockID" json:"exercises"`
 	Day         WorkoutDay        `gorm:"foreignKey:DayID" json:"-"`

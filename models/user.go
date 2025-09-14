@@ -16,9 +16,8 @@ type User struct {
 	AuthTokens          []AuthToken          `gorm:"foreignKey:UserID"`
 	UserPrograms        []UserProgram        `gorm:"foreignKey:UserID"`
 	CompletedDays       map[string]int       `json:"completedDays" gorm:"serializer:json"`
-	// New fields for proper program tracking
-	ProgramStartDates map[string]time.Time `json:"programStartDates" gorm:"serializer:json"`
-	CompletedDaysList map[string][]int     `json:"completedDaysList" gorm:"serializer:json"`
+	ProgramStartDates   map[string]time.Time `json:"programStartDates" gorm:"serializer:json"`
+	CompletedDaysList   map[string][]int     `json:"completedDaysList" gorm:"serializer:json"`
 }
 
 type UserResponse struct {

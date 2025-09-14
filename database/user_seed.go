@@ -29,14 +29,21 @@ func seedAdminUser(db *gorm.DB) {
 		PasswordHash:       string(hashedPassword),
 		Role:               "admin",
 		MustChangePassword: false,
-		CompletedDays:      make(map[string]int),
-		ProgramStartDates:  make(map[string]time.Time),
-		CompletedDaysList:  make(map[string][]int),
+		CompletedDays: map[string]int{
+			"beginner-program": 100,
+			"advanced-program": 100,
+		},
+		ProgramStartDates: map[string]time.Time{
+			"beginner-program": time.Now().AddDate(0, 0, -100),
+			"advanced-program": time.Now().AddDate(0, 0, -100),
+		},
+		CompletedDaysList: make(map[string][]int),
 	}
 
 	var existingUser models.User
 	result := db.Where("email = ?", adminUser.Email).First(&existingUser)
 
+	var adminUserID uint
 	switch result.Error {
 	case gorm.ErrRecordNotFound:
 		if err := db.Create(&adminUser).Error; err != nil {
@@ -44,21 +51,28 @@ func seedAdminUser(db *gorm.DB) {
 			return
 		}
 		db.Model(&adminUser).Update("must_change_password", false)
+		adminUserID = adminUser.ID
 		// log.Printf("Admin user '%s' created successfully.", adminUser.Email)
 	case nil:
 		existingUser.PasswordHash = adminUser.PasswordHash
 		existingUser.Role = "admin"
 		existingUser.MustChangePassword = false
+		existingUser.CompletedDays = adminUser.CompletedDays
+		existingUser.ProgramStartDates = adminUser.ProgramStartDates
+		existingUser.CompletedDaysList = adminUser.CompletedDaysList
 		if err := db.Save(&existingUser).Error; err != nil {
 			log.Printf("Failed to update admin user '%s': %v", existingUser.Email, err)
 			return
 		}
 		db.Model(&existingUser).Update("must_change_password", false)
+		adminUserID = existingUser.ID
 		// log.Printf("Admin user '%s' updated successfully.", existingUser.Email)
 	default:
 		log.Printf("Database error checking for admin user: %v", result.Error)
 		return
 	}
+
+	seedUserPrograms(db, adminUserID)
 }
 
 func seedGenericUser(db *gorm.DB) {
@@ -76,16 +90,16 @@ func seedGenericUser(db *gorm.DB) {
 		Role:               "user",
 		MustChangePassword: false,
 		CompletedDays: map[string]int{
-			"beginner": 3,
-			"advanced": 1,
+			"beginner-program": 3,
+			"advanced-program": 1,
 		},
 		ProgramStartDates: map[string]time.Time{
-			"beginner": time.Now().AddDate(0, 0, -3), // Started 3 days ago
-			"advanced": time.Now().AddDate(0, 0, -1), // Started 1 day ago
+			"beginner-program": time.Now().AddDate(0, 0, -3),
+			"advanced-program": time.Now().AddDate(0, 0, -1),
 		},
 		CompletedDaysList: map[string][]int{
-			"beginner": {1, 2, 3},
-			"advanced": {1},
+			"beginner-program": {1, 2, 3},
+			"advanced-program": {1},
 		},
 	}
 

@@ -11,7 +11,7 @@ type Job struct {
 	gorm.Model
 	SessionID     string
 	CustomerEmail string
-	Status        string // e.g., "pending", "processing", "completed", "failed"
+	Status        string
 	Attempts      int
 	LastAttempt   time.Time
 }

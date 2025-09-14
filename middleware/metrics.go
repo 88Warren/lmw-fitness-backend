@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -9,6 +10,7 @@ import (
 )
 
 type Metrics struct {
+	mu              sync.RWMutex
 	RequestCount    map[string]int64
 	RequestDuration map[string]time.Duration
 	ErrorCount      map[string]int64
@@ -20,7 +22,6 @@ var globalMetrics = &Metrics{
 	ErrorCount:      make(map[string]int64),
 }
 
-// MetricsCollectionMiddleware collects basic metrics
 func MetricsCollectionMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
@@ -32,14 +33,14 @@ func MetricsCollectionMiddleware() gin.HandlerFunc {
 		method := c.Request.Method
 		status := c.Writer.Status()
 
-		// Increment request count
+		globalMetrics.mu.Lock()
+		defer globalMetrics.mu.Unlock()
+
 		key := method + " " + path
 		globalMetrics.RequestCount[key]++
 
-		// Track duration
 		globalMetrics.RequestDuration[key] = duration
 
-		// Track errors
 		if status >= 400 {
 			errorKey := key + " " + strconv.Itoa(status)
 			globalMetrics.ErrorCount[errorKey]++
@@ -47,19 +48,38 @@ func MetricsCollectionMiddleware() gin.HandlerFunc {
 	}
 }
 
-// GetMetrics returns current metrics (for health endpoint)
 func GetMetrics() *Metrics {
-	return globalMetrics
+	globalMetrics.mu.RLock()
+	defer globalMetrics.mu.RUnlock()
+
+	metricsCopy := &Metrics{
+		RequestCount:    make(map[string]int64),
+		RequestDuration: make(map[string]time.Duration),
+		ErrorCount:      make(map[string]int64),
+	}
+
+	for k, v := range globalMetrics.RequestCount {
+		metricsCopy.RequestCount[k] = v
+	}
+	for k, v := range globalMetrics.RequestDuration {
+		metricsCopy.RequestDuration[k] = v
+	}
+	for k, v := range globalMetrics.ErrorCount {
+		metricsCopy.ErrorCount[k] = v
+	}
+
+	return metricsCopy
 }
 
-// LogMetricsPeriodically logs metrics every 5 minutes
 func LogMetricsPeriodically() {
 	ticker := time.NewTicker(5 * time.Minute)
 	go func() {
 		for range ticker.C {
+
+			metrics := GetMetrics()
 			zap.L().Info("Application Metrics",
-				zap.Any("request_counts", globalMetrics.RequestCount),
-				zap.Any("error_counts", globalMetrics.ErrorCount),
+				zap.Any("request_counts", metrics.RequestCount),
+				zap.Any("error_counts", metrics.ErrorCount),
 			)
 		}
 	}()

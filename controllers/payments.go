@@ -146,7 +146,6 @@ func NewPaymentController(db *gorm.DB) *PaymentController {
 	}
 }
 
-// generateRandomPassword generates a secure, random password.
 func GenerateRandomPassword() (string, error) {
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+"
 	var seededRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -181,13 +180,10 @@ func ParseInt64Env(key string) (int64, error) {
 func (pc *PaymentController) FindOrCreateUser(email string) (uint, error) {
 	var user models.User
 
-	// Attempt to find the user. If not found, a new user struct will be initialized.
 	tx := pc.DB.Where(models.User{Email: email}).FirstOrCreate(&user)
 	if tx.Error != nil {
 		return 0, fmt.Errorf("could not find or create user: %w", tx.Error)
 	}
-
-	// If the user was just created, generate a password and save it.
 	if tx.RowsAffected > 0 {
 		randomPassword, err := GenerateRandomPassword()
 		if err != nil {
@@ -230,7 +226,7 @@ func (pc *PaymentController) CreateAuthToken(userID uint, programName string, da
 }
 
 func GenerateRandomToken() string {
-	b := make([]byte, 32) // 32 characters for a robust token
+	b := make([]byte, 32)
 	rand.Read(b)
 	return fmt.Sprintf("%x", b)
 }
@@ -538,7 +534,6 @@ func (pc *PaymentController) StripeWebhook(ctx *gin.Context) {
 		log.Printf("  - Payment Status: %s", checkoutSession.PaymentStatus)
 		log.Printf("  - Customer Email: %s", checkoutSession.CustomerDetails.Email)
 
-		// Only process if payment is actually succeeded
 		if checkoutSession.PaymentStatus != stripe.CheckoutSessionPaymentStatusPaid {
 			log.Printf("Checkout session %s payment not completed yet. Status: %s", checkoutSession.ID, checkoutSession.PaymentStatus)
 			ctx.JSON(http.StatusOK, gin.H{"received": true, "message": "Payment not completed yet"})
@@ -570,7 +565,6 @@ func (pc *PaymentController) StripeWebhook(ctx *gin.Context) {
 
 		log.Printf("Successfully created job for session %s", checkoutSession.ID)
 
-		// Trigger immediate processing
 		if workers.GetGlobalProcessor() != nil {
 			workers.GetGlobalProcessor().TriggerJobProcessing()
 			log.Printf("Triggered immediate job processing for session %s", checkoutSession.ID)
@@ -593,7 +587,6 @@ func (pc *PaymentController) StripeWebhook(ctx *gin.Context) {
 		log.Printf("  - Payment Status: %s", checkoutSession.PaymentStatus)
 		log.Printf("  - Customer Email: %s", checkoutSession.CustomerDetails.Email)
 
-		// Only process if payment is actually completed
 		if checkoutSession.PaymentStatus != stripe.CheckoutSessionPaymentStatusPaid {
 			log.Printf("Checkout session %s payment not completed yet. Status: %s", checkoutSession.ID, checkoutSession.PaymentStatus)
 			ctx.JSON(http.StatusOK, gin.H{"received": true, "message": "Payment not completed yet"})
@@ -609,7 +602,6 @@ func (pc *PaymentController) StripeWebhook(ctx *gin.Context) {
 
 		log.Printf("Checkout session %s payment completed for email: %s (fallback)", checkoutSession.ID, customerEmail)
 
-		// Check if job already exists
 		var existingJob models.Job
 		if pc.DB.Where("session_id = ?", checkoutSession.ID).First(&existingJob).Error == nil {
 			log.Printf("Job already exists for session %s, skipping duplicate creation", checkoutSession.ID)
@@ -633,7 +625,6 @@ func (pc *PaymentController) StripeWebhook(ctx *gin.Context) {
 
 		log.Printf("Successfully created job for session %s (fallback)", checkoutSession.ID)
 
-		// Trigger immediate processing
 		if workers.GetGlobalProcessor() != nil {
 			workers.GetGlobalProcessor().TriggerJobProcessing()
 			log.Printf("Triggered immediate job processing for session %s (fallback)", checkoutSession.ID)
@@ -693,12 +684,6 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 		return fmt.Errorf("session %s is not paid, status: %s", sessionID, checkoutSession.PaymentStatus)
 	}
 
-	// if checkoutSession.PaymentStatus != stripe.CheckoutSessionPaymentStatusPaid {
-	// 	log.Printf("Checkout session %s not paid. Skipping Brevo actions.", checkoutSession.ID)
-	// 	ctx.JSON(http.StatusOK, gin.H{"received": true, "message": "Payment not successful"})
-	// 	return
-	// }
-
 	log.Println("Payment status is 'paid'. Proceeding with Brevo actions.")
 
 	log.Printf("[DEBUG] Fetching line items for session %s", checkoutSession.ID)
@@ -742,7 +727,6 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 	log.Printf("Beginner Program purchased: %v", isBeginnerProgramPurchased)
 	log.Printf("Advanced Program purchased: %v", isAdvancedProgramPurchased)
 
-	// Fetch beginner program
 	var beginnerProgram models.WorkoutProgram
 	if err := pc.DB.Where("name = ?", "beginner-program").First(&beginnerProgram).Error; err == nil {
 		beginnerProgramID = beginnerProgram.ID
@@ -750,7 +734,6 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 		log.Printf("[WARN] Beginner program not found in DB: %v", err)
 	}
 
-	// Fetch advanced program
 	var advancedProgram models.WorkoutProgram
 	if err := pc.DB.Where("name = ?", "advanced-program").First(&advancedProgram).Error; err == nil {
 		advancedProgramID = advancedProgram.ID
@@ -758,21 +741,17 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 		log.Printf("[WARN] Advanced program not found in DB: %v", err)
 	}
 
-	// Handle beginner program purchase
 	if isBeginnerProgramPurchased && beginnerProgramID != 0 {
 		log.Printf("Beginner Program purchased. Creating user account and auth token for %s", customerEmail)
 
-		// Step 1: Find or create the user account
 		userID, err := pc.FindOrCreateUser(customerEmail)
 		if err != nil {
 			log.Printf("Error finding or creating user: %v", err)
 		} else {
-			// Step 2: Check if user already has the beginner program
 			var existingUserProgram models.UserProgram
 			err = pc.DB.Where("user_id = ? AND program_id = ?", userID, beginnerProgramID).
 				First(&existingUserProgram).Error
 
-			// If the program doesn't exist for the user, create it
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				userProgram := models.UserProgram{
 					UserID:    userID,
@@ -789,7 +768,6 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 				log.Printf("User %d already has access to program %d. Skipping creation.", userID, beginnerProgramID)
 			}
 
-			// Step 3: Create a new auth token for this session
 			const programName = "beginner-program"
 			const dayNumber = 1
 			token, err := pc.CreateAuthToken(userID, programName, dayNumber, checkoutSession.ID)
@@ -805,8 +783,6 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 					"FIRSTNAME":    "Client",
 					"WORKOUT_LINK": workoutURL,
 				}
-
-				// Only send email if template ID is configured
 				if pc.BrevoBeginnerProgramTemplateID != 0 {
 					if err := pc.SendBrevoTransactionalEmail(customerEmail, pc.BrevoBeginnerProgramTemplateID, templateParams); err != nil {
 						log.Printf("Error sending beginner program email: %v", err)
@@ -821,21 +797,17 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 		}
 	}
 
-	// Handle advanced program purchase
 	if isAdvancedProgramPurchased && advancedProgramID != 0 {
 		log.Printf("Advanced Program purchased. Creating user account and auth token for %s", customerEmail)
 
-		// Step 1: Find or create the user account
 		userID, err := pc.FindOrCreateUser(customerEmail)
 		if err != nil {
 			log.Printf("Error finding or creating user: %v", err)
 		} else {
-			// Step 2: Check if user already has the advanced program
 			var existingUserProgram models.UserProgram
 			err = pc.DB.Where("user_id = ? AND program_id = ?", userID, advancedProgramID).
 				First(&existingUserProgram).Error
 
-			// If the program doesn't exist for the user, create it
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				userProgram := models.UserProgram{
 					UserID:    userID,
@@ -852,7 +824,6 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 				log.Printf("User %d already has access to program %d. Skipping creation.", userID, advancedProgramID)
 			}
 
-			// Step 3: Create a new auth token for this session
 			const programName = "advanced-program"
 			const dayNumber = 1
 			token, err := pc.CreateAuthToken(userID, programName, dayNumber, checkoutSession.ID)
@@ -861,7 +832,6 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 			} else {
 				log.Printf("Generated token: %s for session %s", token, checkoutSession.ID)
 
-				// Link the new token to the session ID
 				var authToken models.AuthToken
 				if err := pc.DB.Where("token = ?", token).First(&authToken).Error; err == nil {
 					authToken.SessionID = checkoutSession.ID
@@ -871,14 +841,12 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 					log.Printf("Error finding newly created token to link to session: %v", err)
 				}
 
-				// Build workout URL + email params
 				workoutURL := fmt.Sprintf("%s/workout-auth?token=%s", pc.FrontendURL, token)
 				templateParams := map[string]interface{}{
 					"FIRSTNAME":    "Client",
 					"WORKOUT_LINK": workoutURL,
 				}
 
-				// Only send email if template ID is configured
 				if pc.BrevoAdvancedProgramTemplateID != 0 {
 					if err := pc.SendBrevoTransactionalEmail(customerEmail, pc.BrevoAdvancedProgramTemplateID, templateParams); err != nil {
 						log.Printf("Error sending advanced program email: %v", err)
@@ -903,12 +871,10 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 		log.Println("Warning: Brevo Newsletter List ID not configured. Skipping newsletter subscription.")
 	}
 
-	// Iterate through purchased items and add relevant list and template IDs
 	for i, priceID := range purchasedPriceIDs {
 		productName := purchasedProductNames[i]
 		log.Printf("Checking product: %s (Price ID: %s)", productName, priceID)
 
-		// Logic for Mindset Package
 		if priceID == pc.UltimateMindsetPackagePriceID || strings.Contains(strings.ToLower(productName), "mindset") {
 			if pc.BrevoMindsetListID != 0 {
 				listIDsToAdd = append(listIDsToAdd, pc.BrevoMindsetListID)
@@ -924,7 +890,6 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 			}
 		}
 
-		// Logic for other programs
 		switch priceID {
 		case pc.BeginnerProgramPriceID:
 			if pc.BrevoBeginnerListID != 0 {
@@ -959,7 +924,6 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 	log.Printf("Final list of Brevo list IDs to add: %v", listIDsToAdd)
 	log.Printf("Final list of Brevo email template IDs to send: %v", emailTemplatesToSend)
 
-	// Add contact to Brevo lists
 	if len(listIDsToAdd) > 0 {
 		log.Printf("Calling AddContactToBrevo for email: %s with lists: %v", customerEmail, listIDsToAdd)
 		err = pc.AddContactToBrevo(customerEmail, listIDsToAdd)
@@ -972,10 +936,8 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 		log.Println("No Brevo lists identified for this purchase.")
 	}
 
-	// Send all identified transactional emails
 	for templateID := range emailTemplatesToSend {
 		log.Printf("Attempting to send transactional email with Template ID: %d to %s", templateID, customerEmail)
-		// These parameters can be customized for each email template
 		emailParams := map[string]interface{}{
 			"CUSTOMER_EMAIL":  customerEmail,
 			"PURCHASED_ITEMS": purchasedProductNames,
@@ -988,7 +950,6 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 		}
 	}
 
-	// Send the general order confirmation email, if configured
 	if pc.BrevoOrderConfirmationTemplateID != 0 {
 		log.Printf("Attempting to send order confirmation email (Template ID: %d) to %s", pc.BrevoOrderConfirmationTemplateID, customerEmail)
 		orderConfirmationParams := map[string]interface{}{
@@ -1008,34 +969,6 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 	} else {
 		log.Println("Warning: Brevo Order Confirmation Template ID not configured. Skipping general order confirmation email.")
 	}
-
-	// case "invoice.payment_succeeded":
-	// 	log.Println("Processing 'invoice.payment_succeeded' event.")
-	// 	var invoice stripe.Invoice
-	// 	err := json.Unmarshal(event.Data.Raw, &invoice)
-	// 	if err != nil {
-	// 		log.Printf("Error parsing invoice JSON: %v", err)
-	// 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event data"})
-	// 		return
-	// 	}
-
-	// 	customerEmail := invoice.CustomerEmail
-	// 	if customerEmail == "" && invoice.Customer != nil {
-	// 		customer, custErr := pc.StripeClient.Customers.Get(invoice.Customer.ID, nil)
-	// 		if custErr == nil && customer != nil {
-	// 			customerEmail = customer.Email
-	// 		}
-	// 	}
-
-	// 	if customerEmail != "" {
-	// 		log.Printf("Invoice payment succeeded for invoice %s. Customer email: %s", invoice.ID, customerEmail)
-	// 	} else {
-	// 		log.Printf("Invoice payment succeeded for invoice %s, but customer email could not be determined.", invoice.ID)
-	// 	}
-
-	// default:
-	// 	log.Printf("Unhandled event type: %s", event.Type)
-	// }
 
 	log.Printf("Background processing for session %s completed successfully", sessionID)
 	return nil
@@ -1115,7 +1048,6 @@ func (pc *PaymentController) GetWorkoutLink(ctx *gin.Context) {
 
 	log.Printf("Attempting to retrieve workout link for session: %s", req.SessionID)
 
-	// First, try to find the token in the database
 	var authToken models.AuthToken
 	dbErr := pc.DB.Where("session_id = ?", req.SessionID).First(&authToken).Error
 
@@ -1127,17 +1059,14 @@ func (pc *PaymentController) GetWorkoutLink(ctx *gin.Context) {
 		return
 	}
 
-	// If the token was not found, check the database error
 	if dbErr != gorm.ErrRecordNotFound {
 		log.Printf("Database error retrieving token for session %s: %v", req.SessionID, dbErr)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve workout link from database"})
 		return
 	}
 
-	// If we're here, the record was not found (gorm.ErrRecordNotFound)
 	log.Printf("No auth token found for session %s. Checking Stripe status.", req.SessionID)
 
-	// Check Stripe to see if the session is valid and paid
 	session, stripeErr := pc.StripeClient.CheckoutSessions.Get(req.SessionID, nil)
 	if stripeErr != nil {
 		log.Printf("Stripe API error for session %s: %v", req.SessionID, stripeErr)
@@ -1145,11 +1074,9 @@ func (pc *PaymentController) GetWorkoutLink(ctx *gin.Context) {
 		return
 	}
 
-	// If session is paid, but token not found, webhook is still processing
 	if session.PaymentStatus == stripe.CheckoutSessionPaymentStatusPaid {
 		log.Printf("Stripe session %s is paid, but token not found. Webhook is likely still processing.", req.SessionID)
 
-		// Check if there's a pending job for this session
 		var job models.Job
 		if pc.DB.Where("session_id = ? AND status IN (?)", req.SessionID, []string{"pending", "processing"}).First(&job).Error == nil {
 			ctx.JSON(http.StatusAccepted, gin.H{
@@ -1167,7 +1094,6 @@ func (pc *PaymentController) GetWorkoutLink(ctx *gin.Context) {
 		return
 	}
 
-	// If we're here, the session is not paid
 	log.Printf("Stripe session %s is not paid. Payment status: %s", req.SessionID, session.PaymentStatus)
 	ctx.JSON(http.StatusNotFound, gin.H{"error": "Payment not completed for this session."})
 }
@@ -1178,7 +1104,6 @@ func (pc *PaymentController) TestWebhook(ctx *gin.Context) {
 	log.Printf("Method: %s", ctx.Request.Method)
 	log.Printf("URL: %s", ctx.Request.URL.String())
 
-	// Test database connection
 	var jobCount int64
 	if err := pc.DB.Model(&models.Job{}).Count(&jobCount).Error; err != nil {
 		log.Printf("Database error: %v", err)
@@ -1186,7 +1111,6 @@ func (pc *PaymentController) TestWebhook(ctx *gin.Context) {
 		log.Printf("Database connection successful. Total jobs: %d", jobCount)
 	}
 
-	// Test worker status
 	workerStatus := "not available"
 	if workers.GetGlobalProcessor() != nil {
 		workerStatus = "available"

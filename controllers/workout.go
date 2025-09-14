@@ -12,12 +12,10 @@ import (
 	"gorm.io/gorm"
 )
 
-// WorkoutController holds the database connection
 type WorkoutController struct {
 	DB *gorm.DB
 }
 
-// NewWorkoutController creates a new instance of WorkoutController
 func NewWorkoutController(db *gorm.DB) *WorkoutController {
 	return &WorkoutController{DB: db}
 }
@@ -27,7 +25,6 @@ type ProgramDetailsResponse struct {
 	TotalDays int    `json:"totalDays"`
 }
 
-// GetWorkoutPrograms retrieves a list of all workout programs
 func (wc *WorkoutController) GetWorkoutPrograms(c *gin.Context) {
 	var programs []models.WorkoutProgram
 	if err := wc.DB.Find(&programs).Error; err != nil {
@@ -37,7 +34,6 @@ func (wc *WorkoutController) GetWorkoutPrograms(c *gin.Context) {
 	c.JSON(http.StatusOK, programs)
 }
 
-// GetWorkoutDay retrieves a specific workout day with its blocks and exercises
 func (wc *WorkoutController) GetWorkoutDay(c *gin.Context) {
 	programID, err := strconv.Atoi(c.Param("programID"))
 	if err != nil {
@@ -64,12 +60,10 @@ func (wc *WorkoutController) GetWorkoutDay(c *gin.Context) {
 	c.JSON(http.StatusOK, workoutDay)
 }
 
-// GetWarmup retrieves the warmup routine for a specific program
 func (wc *WorkoutController) GetWarmup(c *gin.Context) {
 	wc.getRoutineByProgramName(c, "warmup")
 }
 
-// GetCooldown retrieves the cooldown routine for a specific program
 func (wc *WorkoutController) GetCooldown(c *gin.Context) {
 	wc.getRoutineByProgramName(c, "cooldown")
 }
@@ -127,7 +121,6 @@ func (wc *WorkoutController) getRoutineByProgramName(c *gin.Context, routineType
 		return
 	}
 
-	// Construct the response using the exercise data from the database
 	response := gin.H{
 		"videoUrl":     fmt.Sprintf("https://www.youtube.com/embed/%s", exercise.VideoID),
 		"description":  exercise.Description,
@@ -158,7 +151,6 @@ func (wc *WorkoutController) GetWorkoutDayByProgramAndDay(c *gin.Context) {
 		return
 	}
 
-	// 1. Fetch the user and PRELOAD the nested WorkoutProgram data
 	var user models.User
 	if err := wc.DB.Preload("UserPrograms.WorkoutProgram").First(&user, userID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -171,12 +163,10 @@ func (wc *WorkoutController) GetWorkoutDayByProgramAndDay(c *gin.Context) {
 	// fmt.Printf("Backend: User from DB: Email: %s, Role: %s\n", user.Email, user.Role)
 	// fmt.Printf("Backend: User purchased programs: %v\n", user.UserPrograms)
 
-	// 2. Perform the authorization check
 	isAuthorized := false
 	if user.Role == "admin" {
 		isAuthorized = true
 	} else {
-		// Iterate through the PRELOADED UserPrograms and check the WorkoutProgram's Name
 		for _, userProgram := range user.UserPrograms {
 			if userProgram.WorkoutProgram.Name == programName {
 				isAuthorized = true
@@ -190,7 +180,6 @@ func (wc *WorkoutController) GetWorkoutDayByProgramAndDay(c *gin.Context) {
 		return
 	}
 
-	// 3. If authorized, proceed to fetch and return the workout data
 	var program models.WorkoutProgram
 	if err := wc.DB.Where("name = ?", programName).First(&program).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Program not found"})
@@ -211,7 +200,6 @@ func (wc *WorkoutController) GetWorkoutDayByProgramAndDay(c *gin.Context) {
 	c.JSON(http.StatusOK, workoutDay)
 }
 
-// StartWorkout initiates a new workout session for a user on a given day
 func (wc *WorkoutController) StartWorkout(c *gin.Context) {
 	var req struct {
 		WorkoutDayID uint `json:"workout_day_id" binding:"required"`
@@ -221,10 +209,8 @@ func (wc *WorkoutController) StartWorkout(c *gin.Context) {
 		return
 	}
 
-	// Get userID from the context set by the AuthMiddleware
 	userID, _ := c.Get("userID")
 
-	// Check if a session for this day already exists for the user
 	var existingSession models.UserWorkoutSession
 	if wc.DB.Where("user_id = ? AND workout_day_id = ?", userID, req.WorkoutDayID).First(&existingSession).Error == nil {
 		c.JSON(http.StatusOK, gin.H{"message": "Workout session already started", "session_id": existingSession.ID})
@@ -244,7 +230,6 @@ func (wc *WorkoutController) StartWorkout(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"message": "Workout session started", "session_id": newSession.ID})
 }
 
-// CompleteExercise marks an individual exercise as complete
 func (wc *WorkoutController) CompleteExercise(c *gin.Context) {
 	var req struct {
 		SessionID  uint `json:"session_id" binding:"required"`
@@ -258,9 +243,7 @@ func (wc *WorkoutController) CompleteExercise(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Exercise completion recorded"})
 }
 
-// CompleteWorkoutDay marks an entire workout session as complete
 func (wc *WorkoutController) CompleteWorkoutDay(c *gin.Context) {
-	// Get user from middleware
 	userID, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
@@ -276,14 +259,12 @@ func (wc *WorkoutController) CompleteWorkoutDay(c *gin.Context) {
 		return
 	}
 
-	// Get the user
 	var user models.User
 	if err := wc.DB.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
-	// Initialize maps if nil
 	if user.CompletedDays == nil {
 		user.CompletedDays = make(map[string]int)
 	}
@@ -294,12 +275,10 @@ func (wc *WorkoutController) CompleteWorkoutDay(c *gin.Context) {
 		user.CompletedDaysList = make(map[string][]int)
 	}
 
-	// Set program start date if this is day 1 or if not set
 	if req.DayNumber == 1 || user.ProgramStartDates[req.ProgramName].IsZero() {
 		user.ProgramStartDates[req.ProgramName] = time.Now()
 	}
 
-	// Add day to completed list if not already completed
 	completedList := user.CompletedDaysList[req.ProgramName]
 	dayAlreadyCompleted := false
 	for _, day := range completedList {
@@ -313,13 +292,11 @@ func (wc *WorkoutController) CompleteWorkoutDay(c *gin.Context) {
 		user.CompletedDaysList[req.ProgramName] = append(completedList, req.DayNumber)
 	}
 
-	// Update the highest completed day (for backward compatibility)
 	currentCompleted := user.CompletedDays[req.ProgramName]
 	if req.DayNumber > currentCompleted {
 		user.CompletedDays[req.ProgramName] = req.DayNumber
 	}
 
-	// Save the user with updated completion data
 	if err := wc.DB.Save(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user completion status"})
 		return
@@ -332,7 +309,6 @@ func (wc *WorkoutController) CompleteWorkoutDay(c *gin.Context) {
 	})
 }
 
-// GetUserProgress retrieves a summary of the user's completed workouts
 func (wc *WorkoutController) GetUserProgress(c *gin.Context) {
 	userID, _ := c.Get("userID")
 

@@ -46,7 +46,6 @@ func GetDB() *gorm.DB {
 	return DB
 }
 
-// MigrateDB creates all database tables
 func MigrateDB() {
 	log.Println("Starting database migration...")
 

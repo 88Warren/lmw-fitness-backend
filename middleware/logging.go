@@ -7,10 +7,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// StructuredLoggingMiddleware provides structured logging for all requests
 func StructuredLoggingMiddleware() gin.HandlerFunc {
 	return gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
-		// Use zap for structured logging
 		zap.L().Info("HTTP Request",
 			zap.String("method", param.Method),
 			zap.String("path", param.Path),
@@ -24,7 +22,6 @@ func StructuredLoggingMiddleware() gin.HandlerFunc {
 	})
 }
 
-// MetricsMiddleware tracks request metrics
 func MetricsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
@@ -33,7 +30,6 @@ func MetricsMiddleware() gin.HandlerFunc {
 
 		duration := time.Since(start)
 
-		// Log slow requests (>1 second)
 		if duration > time.Second {
 			zap.L().Warn("Slow request detected",
 				zap.String("method", c.Request.Method),
@@ -43,7 +39,6 @@ func MetricsMiddleware() gin.HandlerFunc {
 			)
 		}
 
-		// Log errors
 		if c.Writer.Status() >= 400 {
 			zap.L().Error("HTTP Error",
 				zap.String("method", c.Request.Method),
