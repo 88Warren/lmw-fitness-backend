@@ -1,3 +1,4 @@
+// models/blog.go
 package models
 
 import (

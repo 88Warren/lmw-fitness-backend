@@ -50,7 +50,7 @@ func (hc *HomeController) HandleContactForm(ctx *gin.Context) {
 		return
 	}
 
-	_, smtpPassword := getK8sSecrets()
+	_, smtpPassword := GetK8sSecrets()
 
 	// log.Printf("Form data received: %+v", form)
 	// log.Printf("reCAPTCHA token received: %s", form.Token)
@@ -80,7 +80,7 @@ func (hc *HomeController) HandleContactForm(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"status": "success", "message": "Message received!"})
 }
 
-func getK8sSecrets() (string, string) {
+func GetK8sSecrets() (string, string) {
 	recaptchaSecret := os.Getenv("RECAPTCHA_SECRET")
 	smtpPassword := os.Getenv("SMTP_PASSWORD")
 
@@ -151,7 +151,7 @@ func getK8sSecrets() (string, string) {
 }
 
 func verifyRecaptcha(token string) bool {
-	secret, _ := getK8sSecrets()
+	secret, _ := GetK8sSecrets()
 	verifyURL := "https://www.google.com/recaptcha/api/siteverify"
 
 	// log.Printf("Verifying reCAPTCHA with token: %s", token)

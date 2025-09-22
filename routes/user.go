@@ -7,16 +7,21 @@ import (
 )
 
 func RegisterUserRoutes(router *gin.Engine, uc *controllers.UserController) {
-	router.POST("/api/register", uc.RegisterUser)
-	router.POST("/api/login", uc.LoginUser)
-
-	router.POST("/api/forgot-password", uc.RequestPasswordReset)
-	router.POST("/api/verify-reset-token", uc.VerifyResetToken)
-	router.POST("/api/reset-password", uc.ResetPassword)
-
-	authenticated := router.Group("/api")
+	api := router.Group("/api")
+	{
+		api.POST("/register", uc.RegisterUser)
+		api.POST("/login", uc.LoginUser)
+		api.POST("/forgot-password", uc.RequestPasswordReset)
+		api.POST("/verify-reset-token", uc.VerifyResetToken)
+		api.POST("/reset-password", uc.ResetPassword)
+		api.POST("/verify-workout-token", uc.VerifyWorkoutToken)
+		api.POST("/refresh-token", middleware.AuthMiddleware(), uc.RefreshToken)
+	}
+	authenticated := api.Group("")
 	authenticated.Use(middleware.AuthMiddleware())
 	{
+		authenticated.PUT("/change-password-first-login", uc.ChangePassword)
+		authenticated.POST("/set-first-time-password", uc.SetFirstTimePassword)
 		authenticated.GET("/profile", uc.GetProfile)
 	}
 }

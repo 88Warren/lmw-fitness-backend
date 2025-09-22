@@ -22,7 +22,7 @@ func (healthController *HealthController) LivenessCheck(ctx *gin.Context) {
 }
 
 func (healthController *HealthController) ReadinessCheck(ctx *gin.Context) {
-	err := healthController.checkDatabaseConnection()
+	err := healthController.CheckDatabaseConnection()
 	if err != nil {
 		log.Printf("Readiness check failed: %v", err)
 		ctx.JSON(http.StatusServiceUnavailable, gin.H{
@@ -34,7 +34,7 @@ func (healthController *HealthController) ReadinessCheck(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"status": "Ready"})
 }
 
-func (healthController *HealthController) checkDatabaseConnection() error {
+func (healthController *HealthController) CheckDatabaseConnection() error {
 	if healthController.DB == nil {
 		return fmt.Errorf("database connection is nil")
 	}

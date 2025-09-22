@@ -6,12 +6,12 @@ import (
 	"os"
 
 	"github.com/88warren/lmw-fitness-backend/controllers"
+	"github.com/88warren/lmw-fitness-backend/database"
 	"github.com/88warren/lmw-fitness-backend/middleware"
-	"github.com/88warren/lmw-fitness-backend/models"
 	"github.com/88warren/lmw-fitness-backend/routes"
+	"github.com/88warren/lmw-fitness-backend/workers"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -50,6 +50,11 @@ func GetEnv(key string, fallback string) string {
 
 func SetupServer() *gin.Engine {
 	router := gin.Default()
+
+	router.Use(middleware.StructuredLoggingMiddleware())
+	router.Use(middleware.MetricsMiddleware())
+	router.Use(middleware.MetricsCollectionMiddleware())
+
 	router.Use(middleware.CORSMiddleware())
 	router.Static("/images", "./images")
 	router.GET("/debug/images", func(c *gin.Context) {
@@ -68,73 +73,36 @@ func SetupServer() *gin.Engine {
 		c.JSON(http.StatusOK, gin.H{"files": filenames})
 	})
 	router.Use(middleware.DBMiddleware())
+
+	middleware.LogMetricsPeriodically()
+
 	return router
 }
 
-func SetupAdminUser(db *gorm.DB) error {
-	adminEmail := os.Getenv("ADMIN_EMAIL")
-	adminPassword := os.Getenv("ADMIN_PASSWORD")
-
-	if adminEmail == "" || adminPassword == "" {
-		// log.Println("ADMIN_EMAIL or ADMIN_PASSWORD environment variables not set. Skipping admin user setup.")
-		return nil
-	}
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.DefaultCost)
-	if err != nil {
-		log.Printf("Failed to hash admin password: %v", err)
-		return err
-	}
-
-	adminUser := models.User{
-		Email:        adminEmail,
-		PasswordHash: string(hashedPassword),
-		Role:         "admin",
-	}
-
-	var existingUser models.User
-	result := db.Where("email = ?", adminUser.Email).First(&existingUser)
-
-	if result.Error == gorm.ErrRecordNotFound {
-		if err := db.Create(&adminUser).Error; err != nil {
-			log.Printf("Failed to create admin user: %v", err)
-			return err
-		}
-		// log.Printf("Admin user '%s' created successfully.", adminUser.Email)
-	} else if result.Error == nil {
-		existingUser.PasswordHash = adminUser.PasswordHash
-		existingUser.Role = "admin"
-		if err := db.Save(&existingUser).Error; err != nil {
-			log.Printf("Failed to update admin user '%s': %v", existingUser.Email, err)
-			return err
-		}
-		// log.Printf("Admin user '%s' updated successfully.", existingUser.Email)
-	} else {
-		// log.Printf("Database error checking for admin user: %v", result.Error)
-		return result.Error
-	}
-
-	return nil
-}
-
 func SetupHandlers(router *gin.Engine, db *gorm.DB) {
-	err := db.AutoMigrate(&models.Blog{}, &models.User{}, &models.PasswordResetToken{}, &models.NewsletterSubscriber{})
-	if err != nil {
-		log.Fatalf("Failed to auto migrate models: %v", err)
-	}
-	// log.Println("Blog & User model auto-migrated successfully.")
-
-	if err := SetupAdminUser(db); err != nil {
-		log.Fatalf("Failed to setup admin user: %v", err)
-	}
+	database.MigrateDB()
+	database.SeedDB(db)
+	// log.Println("Database models auto-migrated successfully.")
 
 	homeController := controllers.NewHomeController(db)
 	healthController := controllers.NewHealthController(db)
+	paymentController := controllers.NewPaymentController(db)
 	blogController := controllers.NewBlogController(db)
 	userController := controllers.NewUserController(db)
 	newsletterController := controllers.NewNewsletterController(db)
-	routes.RegisterHomeRoutes(router, homeController, healthController)
+	workoutController := controllers.NewWorkoutController(db)
+	monitoringController := controllers.NewMonitoringController(db)
+
+	routes.RegisterHomeRoutes(router, homeController)
+	routes.RegisterHealthRoutes(router, healthController)
+	routes.RegisterPaymentRoutes(router, paymentController)
 	routes.RegisterBlogRoutes(router, blogController)
 	routes.RegisterUserRoutes(router, userController)
 	routes.RegisterNewsletterRoutes(router, newsletterController)
+	routes.RegisterWorkoutRoutes(router, workoutController)
+	routes.RegisterMonitoringRoutes(router, monitoringController)
+
+	go func() {
+		workers.StartPaymentWorker(db, paymentController)
+	}()
 }
