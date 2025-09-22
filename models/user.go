@@ -12,7 +12,7 @@ type User struct {
 	PasswordHash        string               `gorm:"not null" json:"-"`
 	Role                string               `gorm:"not null;default:'user'" json:"role"`
 	PasswordResetTokens []PasswordResetToken `gorm:"foreignKey:UserID"`
-	MustChangePassword  bool                 `gorm:"default:true"`
+	MustChangePassword  bool                 `gorm:"default:false"`
 	AuthTokens          []AuthToken          `gorm:"foreignKey:UserID"`
 	UserPrograms        []UserProgram        `gorm:"foreignKey:UserID"`
 	CompletedDays       map[string]int       `json:"completedDays" gorm:"serializer:json"`

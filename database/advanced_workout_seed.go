@@ -80,7 +80,7 @@ func AdvancedWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   2,
 		Title:       "Upper Body Power",
-		Description: "Every Minute on the Minute (EMOM) Complete the following reps within a minute. The quicker yu do them, the more rest you get",
+		Description: "Every Minute on the Minute (EMOM) Complete the following reps within a minute. The quicker yu do them, the more rest you get.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "EMOM",
@@ -106,14 +106,13 @@ func AdvancedWorkoutDaySeed() {
 			{
 				BlockType:   "For Time",
 				BlockRounds: 4,
-				RoundRest:   "90s",
-				BlockNotes:  "Complete 4 rounds of all 5 exercises for the given number of reps. Rest 90 seconds between rounds. Complete for workout as fast as you can.",
+				BlockNotes:  "Complete 4 rounds of all 5 exercises for the given number of reps. Complete the workout as fast as you can.",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Squat Jumps"], Reps: "15"},
-					{Order: 2, ExerciseID: exIDs["Jump Lunge"], Reps: "20", Tips: "2 Lunges = 1 rep"},
-					{Order: 3, ExerciseID: exIDs["Broad Jumps"], Reps: "12"},
+					{Order: 1, ExerciseID: exIDs["Squat Jumps"], Reps: "30"},
+					{Order: 2, ExerciseID: exIDs["Broad Jumps"], Reps: "10"},
+					{Order: 3, ExerciseID: exIDs["Jump Lunge"], Reps: "30", Tips: "1 Lunge = 1 rep"},
 					{Order: 4, ExerciseID: exIDs["Burpees"], Reps: "10"},
-					{Order: 5, ExerciseID: exIDs["Glute Bridges"], Duration: "30s"},
+					{Order: 5, ExerciseID: exIDs["Glute Bridges"], Reps: "30"},
 				},
 			},
 		},
@@ -250,7 +249,7 @@ func AdvancedWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   8,
 		Title:       "Recovery day & Optional workout",
-		Description: " Mobility. Optional Workout: EMOM.",
+		Description: "Mobility. Optional Workout: Every Minute on the Minute (EMOM) Complete the following reps within a minute. The quicker yu do them, the more rest you get",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "Mobility",
@@ -284,7 +283,7 @@ func AdvancedWorkoutDaySeed() {
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:  "For Time",
-				BlockNotes: "Pyramid: 2-4-6-8-10-12-14-16-14-12-10-8-6-4-2 reps. Rest when needed.",
+				BlockNotes: "A pyramid workout for plyometric power. Complete all exercises from 2 reps to 16 reps and back to 2 reps as quickly as possible.",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Tuck Jumps"], Reps: "2, 4, 6, 8, 10, 12, 14, 16, 14, 12, 10, 8, 6, 4, 2"},
 					{Order: 2, ExerciseID: exIDs["Plyo Press Ups"], Reps: "2, 4, 6, 8, 10, 12, 14, 16, 14, 12, 10, 8, 6, 4, 2"},
@@ -304,7 +303,7 @@ func AdvancedWorkoutDaySeed() {
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:  "For Time",
-				BlockNotes: "Complete all 4 exercise for the given number of reps. Complete the workout as fast as you can.",
+				BlockNotes: "Complete all 4 exercise for the given number of reps. Work through the exercises as fast as possible.",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Press Ups"], Reps: "100"},
 					{Order: 2, ExerciseID: exIDs["Tricep Dips (with Chair)"], Reps: "75"},
@@ -320,7 +319,7 @@ func AdvancedWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   11,
 		Title:       "Core Focus & Full Body Burst",
-		Description: "Every Minute on the Minute (EMOM) Complete the following reps within a minute. The quicker yu do them, the more rest you get",
+		Description: "Workout 1: Every Minute on the Minute (EMOM) Complete the following reps within a minute. The quicker you do them, the more rest you get. Workout 2: For time workout",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "EMOM",
@@ -415,7 +414,7 @@ func AdvancedWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   15,
 		Title:       "Recovery day & Optional workout",
-		Description: "Mobility. Optional Workout: AMRAP & circuit.",
+		Description: "Mobility. Optional 2 x mini workouts: AMRAP & for time pyramid.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "Mobility",
@@ -436,10 +435,10 @@ func AdvancedWorkoutDaySeed() {
 			},
 			{
 				BlockType:  "For Time",
-				BlockNotes: "Pyramid: 5-6-7-8-9-10-9-8-7-6-5 reps.",
+				BlockNotes: "A pyramid workout for full body endurance. Complete all exercises from 5 reps to 10 reps and back to 5 reps as quickly as possible.",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Inch Worm"], Reps: "5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1"},
-					{Order: 2, ExerciseID: exIDs["Pike Jumps"], Reps: "5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1"},
+					{Order: 1, ExerciseID: exIDs["Inch Worm"], Reps: "5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 5"},
+					{Order: 2, ExerciseID: exIDs["Pike Jumps"], Reps: "5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 5"},
 				},
 			},
 		},
@@ -450,7 +449,7 @@ func AdvancedWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   16,
 		Title:       "Lower Body Power & Endurance",
-		Description: "A timed circuit followed by a descending ladder for time.",
+		Description: "Workout 1: A lower body circuit. Workout 2: A descending ladder for time.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "Circuit",
@@ -464,9 +463,9 @@ func AdvancedWorkoutDaySeed() {
 			},
 			{
 				BlockType:  "For Time",
-				BlockNotes: "Descending and Ascending ladders. Broad Jumps: 2-4-6-8-10 and Thrusters: 10-8-6-4-2",
+				BlockNotes: "A descending ladder workout for lower body endurance. Complete all exercises from 10 reps down to 2 as quickly as possible.",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Broad Jumps"], Reps: "2, 4, 6, 8, 10"},
+					{Order: 1, ExerciseID: exIDs["Broad Jumps"], Reps: "10, 8, 6, 4, 2"},
 					{Order: 2, ExerciseID: exIDs["Thrusters"], Reps: "10, 8, 6, 4, 2"},
 				},
 			},
@@ -590,8 +589,7 @@ func AdvancedWorkoutDaySeed() {
 			{
 				BlockType:   "For Time",
 				BlockRounds: 5,
-				RoundRest:   "60s",
-				BlockNotes:  "Complete 5 rounds of all 5 exercises for the given number of reps. Rest 1 minutes between rounds. Complete the workout as fast as you can.",
+				BlockNotes:  "Complete 5 rounds of all 5 exercises for the given number of reps. Complete the workout as fast as you can.",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Thrusters"], Reps: "8"},
 					{Order: 2, ExerciseID: exIDs["Burpees"], Reps: "10"},
@@ -612,7 +610,7 @@ func AdvancedWorkoutDaySeed() {
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:  "For Time",
-				BlockNotes: "Complete all 4 exercises for the given number of reps. Complete the workout as fast as you can.",
+				BlockNotes: "Complete all 4 exercises for the given number of reps. Work through the exercises as fast as possible.",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Squat Jumps"], Reps: "200"},
 					{Order: 2, ExerciseID: exIDs["Press Ups"], Reps: "150"},
@@ -628,7 +626,7 @@ func AdvancedWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   22,
 		Title:       "Recovery day & Optional workout",
-		Description: "Mobility. Optional Workout: Pyramid & AMRAP Finisher ",
+		Description: "Mobility. Optional 2 x mini workout: for time pyramid & AMRAP Finisher ",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "Mobility",
@@ -640,10 +638,10 @@ func AdvancedWorkoutDaySeed() {
 			},
 			{
 				BlockType:  "For Time",
-				BlockNotes: "Pyramid Burpees: 5-10-15-10-5 reps. Pyramid Squat Jumps: 10-20-30-20-10 reps.",
+				BlockNotes: "A pyramid workout for full body endurance. Complete all exercises from 10 reps to 20 reps and back to 10 reps as quickly as possible.",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Burpees"], Reps: "5, 10, 15, 10, 5"},
-					{Order: 2, ExerciseID: exIDs["Squat Jumps"], Reps: "10, 20, 30, 20, 10"},
+					{Order: 1, ExerciseID: exIDs["Burpees"], Reps: "10, 15, 20, 15, 10"},
+					{Order: 2, ExerciseID: exIDs["Squat Jumps"], Reps: "10, 15, 20, 15, 10"},
 				},
 			},
 			{
@@ -663,7 +661,7 @@ func AdvancedWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   23,
 		Title:       "Upper Body & Core Endurance",
-		Description: "A timed circuit, a pyramid workout and a finisher.",
+		Description: "Workout 1: Timed circuit. Workout 2: For time pyramid. Workout 3: Burpee finisher.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "Circuit",
@@ -678,15 +676,15 @@ func AdvancedWorkoutDaySeed() {
 			},
 			{
 				BlockType:  "For Time",
-				BlockNotes: "Pyramid V Press Ups: 15-10-5-10-15. Pyramid Half Sit Ups: 25-20-15-20-25.",
+				BlockNotes: "Complete the following two exercises in the Pyramid workout. Working from 25 reps down to 15, in groups of 5 and back to 15 reps.",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["V Press Ups"], Reps: "15, 10, 5, 10, 15"},
+					{Order: 1, ExerciseID: exIDs["V Press Ups"], Reps: "25, 20, 15, 20, 25"},
 					{Order: 2, ExerciseID: exIDs["Sit Ups"], Reps: "25, 20, 15, 20, 25"},
 				},
 			},
 			{
 				BlockType:  "For Time",
-				BlockNotes: "Finisher.",
+				BlockNotes: "Finisher: Complete 50 burpees as quickly as possible.",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Burpees"], Reps: "50"},
 				},
@@ -699,7 +697,7 @@ func AdvancedWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   24,
 		Title:       "Lower Body Endurance & Agility",
-		Description: "A timed circuit, an AMRAP and a static hold finisher.",
+		Description: "Workout 1: Timed circuit. Workout 2: AMRAP. Workout 3: Static hold finisher.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "Circuit",
@@ -722,8 +720,8 @@ func AdvancedWorkoutDaySeed() {
 				},
 			},
 			{
-				BlockType:  "For Time",
-				BlockNotes: "Finisher: Multiple Static Holds: 1 minute each.",
+				BlockType:  "EMOM",
+				BlockNotes: "4 Minutes: Finisher: Multiple Static Holds: 1 minute each.",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Squat Hold"], Tips: "Hold", Duration: "1 min"},
 					{Order: 2, ExerciseID: exIDs["Wall Sits"], Tips: "Hold", Duration: "1 min"},
@@ -739,13 +737,12 @@ func AdvancedWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   25,
 		Title:       "Plyo Push",
-		Description: "A plyometric workout with a plank challenge finisher.",
+		Description: "Workout 1: Plyometric for time workout. Workout 2: Plank challenge finisher.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "For Time",
 				BlockRounds: 4,
-				RoundRest:   "60s",
-				BlockNotes:  "Complete 4 rounds of all 8 exercises for the given number of reps. Rest 60 seconds between rounds. Complete for workout as fast as you can.",
+				BlockNotes:  "Complete 4 rounds of all 8 exercises for the given number of reps. Complete the workout as fast as you can.",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Plyo Press Ups"], Reps: "12"},
 					{Order: 2, ExerciseID: exIDs["Tuck Jumps"], Reps: "20"},
@@ -772,13 +769,12 @@ func AdvancedWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   26,
 		Title:       "Core Strength & Upper Body Finisher",
-		Description: "A for time circuit with a press up finisher.",
+		Description: "Workout 1: Timed circuit. Workout 2: EMOM press up finisher. Choose any variation of press up you want for the given number of reps.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "For Time",
 				BlockRounds: 4,
-				RoundRest:   "30s",
-				BlockNotes:  "Complete 4 rounds of all 8 exercises for the given number of reps. Rest 30 seconds between rounds. Complete for workout as fast as you can.",
+				BlockNotes:  "Complete 4 rounds of all 8 exercises for the given number of reps. Complete the workout as fast as you can.",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Diamond Sit Ups"], Reps: "15"},
 					{Order: 2, ExerciseID: exIDs["High Low Plank"], Reps: "15"},
@@ -791,10 +787,15 @@ func AdvancedWorkoutDaySeed() {
 				},
 			},
 			{
-				BlockType:  "For Time",
-				BlockNotes: "EMOM Finisher: Press Up Variations. 12 reps in minute 1, increase by 2 reps each minute for 5 minutes.",
+				BlockType:   "EMOM",
+				BlockRounds: 1,
+				BlockNotes:  "5 minutes: EMOM Finisher Press Up Variations (you chosoe your variation). 12 reps in minute 1, increase by 2 reps each minute.",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Press Ups"], Reps: "EMOM increasing reps"},
+					{Order: 1, ExerciseID: exIDs["Press Ups"], Reps: "12"},
+					{Order: 2, ExerciseID: exIDs["Press Ups"], Reps: "14"},
+					{Order: 3, ExerciseID: exIDs["Press Ups"], Reps: "16"},
+					{Order: 4, ExerciseID: exIDs["Press Ups"], Reps: "18"},
+					{Order: 5, ExerciseID: exIDs["Press Ups"], Reps: "20"},
 				},
 			},
 		},
@@ -805,7 +806,7 @@ func AdvancedWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   27,
 		Title:       "Full Body Cardio and Agility",
-		Description: "A timed circuit followed by a 'Death by Burpees' finisher.",
+		Description: "Workout 1: Full Body Cardio circuit. Workout 2: EMOM burpee finisher. Complete 6 burpees in the first minute and increase the reps by 2 each minute.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "Circuit",
@@ -821,10 +822,14 @@ func AdvancedWorkoutDaySeed() {
 				},
 			},
 			{
-				BlockType:  "For Time",
-				BlockNotes: "Finisher: Death by Burpees: 6 reps first minute, 8 reps second minute, etc., until failure.",
+				BlockType:  "EMOM",
+				BlockNotes: "5 minutes: EMOM Finisher Death by Burpees. 6 reps in minute 1, increase by 2 reps each minute.",
 				Exercises: []models.WorkoutExercise{
-					{Order: 1, ExerciseID: exIDs["Burpees"], Reps: "Increasing Reps until Failure"},
+					{Order: 1, ExerciseID: exIDs["Burpees"], Reps: "6"},
+					{Order: 2, ExerciseID: exIDs["Burpees"], Reps: "8"},
+					{Order: 3, ExerciseID: exIDs["Burpees"], Reps: "10"},
+					{Order: 4, ExerciseID: exIDs["Burpees"], Reps: "12"},
+					{Order: 5, ExerciseID: exIDs["Burpees"], Reps: "14"},
 				},
 			},
 		},
@@ -835,11 +840,10 @@ func AdvancedWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   28,
 		Title:       "Endurance Workout",
-		Description: "Multiple mini AMRAPs with a ladder finisher.",
+		Description: "Workout 1: 5 min squat jumps. Workout 2: 4 min press ups. Workouut 3: 3 min mountain climbers. Workout 4: 2 min burpees. Workout 5: 1 min tuck jumps. Workout 6: full body ladder finisher.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:  "AMRAP",
-				RoundRest:  "60s",
 				BlockNotes: "5 minutes",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Squat Jumps"], Reps: "Max"},
@@ -847,7 +851,6 @@ func AdvancedWorkoutDaySeed() {
 			},
 			{
 				BlockType:  "AMRAP",
-				RoundRest:  "60s",
 				BlockNotes: "4 minutes",
 				Exercises: []models.WorkoutExercise{
 					{Order: 2, ExerciseID: exIDs["Press Ups"], Reps: "Max"},
@@ -855,7 +858,6 @@ func AdvancedWorkoutDaySeed() {
 			},
 			{
 				BlockType:  "AMRAP",
-				RoundRest:  "60s",
 				BlockNotes: "3 minutes",
 				Exercises: []models.WorkoutExercise{
 					{Order: 3, ExerciseID: exIDs["Mountain Climbers"], Reps: "Max"},
@@ -863,7 +865,6 @@ func AdvancedWorkoutDaySeed() {
 			},
 			{
 				BlockType:  "AMRAP",
-				RoundRest:  "60s",
 				BlockNotes: "2 minutes",
 				Exercises: []models.WorkoutExercise{
 					{Order: 4, ExerciseID: exIDs["Burpees"], Reps: "Max"},
@@ -871,7 +872,6 @@ func AdvancedWorkoutDaySeed() {
 			},
 			{
 				BlockType:  "AMRAP",
-				RoundRest:  "60s",
 				BlockNotes: "1 minute",
 				Exercises: []models.WorkoutExercise{
 					{Order: 5, ExerciseID: exIDs["Tuck Jumps"], Reps: "Max"},
@@ -879,7 +879,7 @@ func AdvancedWorkoutDaySeed() {
 			},
 			{
 				BlockType:  "For Time",
-				BlockNotes: "Descending ladder: 10-9-8-7-6-5-4-3-2-1.",
+				BlockNotes: "A descending ladder workout for full body endurance. Complete all exercises from 10 reps down to 1 as quickly as possible.",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Leg Circles"], Reps: "10, 9, 8, 7, 6, 5, 4, 3, 2, 1"},
 					{Order: 2, ExerciseID: exIDs["Burpee Sprints"], Reps: "10, 9, 8, 7, 6, 5, 4, 3, 2, 1"},
@@ -905,7 +905,7 @@ func AdvancedWorkoutDaySeed() {
 			},
 			{
 				BlockType:  "For Time",
-				BlockNotes: "Complete all 5 exercises for the given number of reps. Complete for workout as fast as you can.",
+				BlockNotes: "Complete all 5 exercises for the given number of reps as quickly as possible.",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Squat Jumps"], Reps: "200"},
 					{Order: 2, ExerciseID: exIDs["Mountain Climbers"], Reps: "150"},

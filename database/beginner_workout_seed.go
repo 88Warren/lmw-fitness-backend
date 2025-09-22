@@ -379,7 +379,7 @@ func BeginnerWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   13,
 		Title:       "Core Focus & Full Body Cardio",
-		Description: "A core circuit followed by a cardio circuit.",
+		Description: "Workout 1: Core circuit. Workout 2: Cardio circuit.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "Circuit",
@@ -492,7 +492,7 @@ func BeginnerWorkoutDaySeed() {
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:  "For Time",
-				BlockNotes: "Pyramid: 3-4-5-6-7-6-5-4-3 reps.",
+				BlockNotes: "A pyramid workout for lower body endurance. Complete all exercises from 3 reps to 7 reps and back to 3 reps as quickly as possible.",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Squat Jumps"], Reps: "3, 4, 5, 6, 7, 6, 5, 4, 3"},
 					{Order: 2, ExerciseID: exIDs["Jump Lunge"], Reps: "3, 4, 5, 6, 7, 6, 5, 4, 3", Tips: "2 Lunges = 1 rep"},
@@ -596,7 +596,7 @@ func BeginnerWorkoutDaySeed() {
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:  "For Time",
-				BlockNotes: "Descending ladder: 10-9-8-7-6-5-4-3-2-1 reps.",
+				BlockNotes: "A descending ladder for a full body workout. Complete all exercises from 10 reps down to 1 as quickly as possible.",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Burpees"], Reps: "10, 9, 8, 7, 6, 5, 4, 3, 2, 1"},
 					{Order: 2, ExerciseID: exIDs["Squat Jumps"], Reps: "10, 9, 8, 7, 6, 5, 4, 3, 2, 1"},
@@ -643,7 +643,7 @@ func BeginnerWorkoutDaySeed() {
 		ProgramID:   programID,
 		DayNumber:   23,
 		Title:       "Upper Body & Core Challenge",
-		Description: "An EMOM circuit followed by a core circuit.",
+		Description: "Workout 1: EMOM circuit. Workout 2: Core circuit.",
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:   "EMOM",
@@ -795,7 +795,7 @@ func BeginnerWorkoutDaySeed() {
 		WorkoutBlocks: []models.WorkoutBlock{
 			{
 				BlockType:  "For Time",
-				BlockNotes: "Pyramid: 1-2-3-4-5-6-7-8-9-10-9-8-7-6-5-4-3-2-1 reps.",
+				BlockNotes: "A pyramid workout with a mix of exercises. Complete all exercises from 1 rep to 10 reps back to 1 rep as quickly as possible.",
 				Exercises: []models.WorkoutExercise{
 					{Order: 1, ExerciseID: exIDs["Squat Jumps"], Reps: "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1"},
 					{Order: 2, ExerciseID: exIDs["Press Ups"], Reps: "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1"},

@@ -196,7 +196,7 @@ func (pc *PaymentController) FindOrCreateUser(email string) (uint, error) {
 		}
 
 		user.PasswordHash = string(hashedPassword)
-		user.MustChangePassword = true
+		user.MustChangePassword = true // Payment users must change their password
 
 		if err := pc.DB.Save(&user).Error; err != nil {
 			return 0, fmt.Errorf("could not save new user password: %w", err)

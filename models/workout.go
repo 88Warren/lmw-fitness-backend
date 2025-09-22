@@ -54,6 +54,14 @@ type WorkoutExercise struct {
 	Exercise      Exercise     `gorm:"foreignKey:ExerciseID" json:"exercise"`
 }
 
+type WorkoutStep struct {
+	ID          uint              `json:"id"`
+	StepNumber  int               `json:"stepNumber"`
+	Reps        string            `json:"reps"`
+	Exercises   []WorkoutExercise `json:"exercises"`
+	IsCompleted bool              `json:"isCompleted"`
+}
+
 type Exercise struct {
 	gorm.Model
 	Name            string    `gorm:"not null" json:"name"`

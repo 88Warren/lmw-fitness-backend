@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/88warren/lmw-fitness-backend/models"
@@ -71,7 +72,7 @@ func (uc *UserController) RegisterUser(ctx *gin.Context) {
 		Email:              req.Email,
 		PasswordHash:       string(hashedPassword),
 		Role:               "user",
-		MustChangePassword: true,
+		MustChangePassword: false, // Manual registration doesn't require password change
 		CompletedDays:      make(map[string]int),
 		ProgramStartDates:  make(map[string]time.Time),
 		CompletedDaysList:  make(map[string][]int),
@@ -82,9 +83,14 @@ func (uc *UserController) RegisterUser(ctx *gin.Context) {
 		return
 	}
 
-	if err := uc.initializeProgramAccess(&user); err != nil {
-		log.Printf("Failed to initialize program access for user %s: %v", user.Email, err)
+	// Explicitly set MustChangePassword to false for manual registrations (override DB default)
+	user.MustChangePassword = false
+	if err := uc.DB.Save(&user).Error; err != nil {
+		log.Printf("Warning: Failed to update MustChangePassword for user %s: %v", user.Email, err)
 	}
+
+	// Don't initialize program access for manual registrations - users only get calorie calculator
+	// Program access will be granted when they purchase programs
 
 	token, err := uc.GenerateJWT(user.ID, user.Email, user.Role)
 	if err != nil {
@@ -100,50 +106,9 @@ func (uc *UserController) RegisterUser(ctx *gin.Context) {
 			Email:              user.Email,
 			Role:               user.Role,
 			MustChangePassword: user.MustChangePassword,
+			PurchasedPrograms:  []string{}, // New users have no programs
 		},
 	})
-}
-
-func (uc *UserController) initializeProgramAccess(user *models.User) error {
-	var programs []models.WorkoutProgram
-	if err := uc.DB.Find(&programs).Error; err != nil {
-		return fmt.Errorf("failed to fetch programs: %v", err)
-	}
-
-	if user.CompletedDays == nil {
-		user.CompletedDays = make(map[string]int)
-	}
-	if user.ProgramStartDates == nil {
-		user.ProgramStartDates = make(map[string]time.Time)
-	}
-	if user.CompletedDaysList == nil {
-		user.CompletedDaysList = make(map[string][]int)
-	}
-
-	for _, program := range programs {
-		user.CompletedDays[program.Name] = 0
-		user.ProgramStartDates[program.Name] = time.Now()
-		user.CompletedDaysList[program.Name] = []int{}
-
-		userProgram := models.UserProgram{
-			UserID:    user.ID,
-			ProgramID: program.ID,
-		}
-
-		var existingUserProgram models.UserProgram
-		result := uc.DB.Where("user_id = ? AND program_id = ?", user.ID, program.ID).First(&existingUserProgram)
-		if result.Error == gorm.ErrRecordNotFound {
-			if err := uc.DB.Create(&userProgram).Error; err != nil {
-				log.Printf("Failed to create user-program association for user %d, program %d: %v", user.ID, program.ID, err)
-			}
-		}
-	}
-
-	if err := uc.DB.Save(user).Error; err != nil {
-		return fmt.Errorf("failed to save user program access: %v", err)
-	}
-
-	return nil
 }
 
 func (uc *UserController) LoginUser(ctx *gin.Context) {
@@ -175,7 +140,7 @@ func (uc *UserController) LoginUser(ctx *gin.Context) {
 		"user_id": user.ID,
 		"email":   user.Email,
 		"role":    user.Role,
-		"exp":     time.Now().Add(time.Hour * 24).Unix(),
+		"exp":     time.Now().Add(time.Hour * 24 * 30).Unix(), // 30 days instead of 1 day
 	})
 
 	jwtSecret := os.Getenv("JWT_SECRET")
@@ -211,6 +176,77 @@ func (uc *UserController) LoginUser(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "Login successful",
+		"token":   tokenString,
+		"user": models.UserResponse{
+			ID:                 user.ID,
+			Email:              user.Email,
+			Role:               user.Role,
+			MustChangePassword: user.MustChangePassword,
+			PurchasedPrograms:  programList,
+		},
+	})
+}
+
+func (uc *UserController) RefreshToken(ctx *gin.Context) {
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User ID not found in token"})
+		return
+	}
+
+	userEmail, exists := ctx.Get("userEmail")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User email not found in token"})
+		return
+	}
+
+	userRole, exists := ctx.Get("userRole")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found in token"})
+		return
+	}
+
+	// Generate new token
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id": userID,
+		"email":   userEmail,
+		"role":    userRole,
+		"exp":     time.Now().Add(time.Hour * 24 * 30).Unix(), // 30 days
+	})
+
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "supersecretjwtkey"
+	}
+
+	tokenString, err := token.SignedString([]byte(jwtSecret))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
+	// Get fresh user data
+	var user models.User
+	if err := uc.DB.Preload("AuthTokens").First(&user, userID).Error; err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user data"})
+		return
+	}
+
+	// Get purchased programs
+	purchasedPrograms := make(map[string]bool)
+	for _, authToken := range user.AuthTokens {
+		if !authToken.IsUsed {
+			purchasedPrograms[authToken.ProgramName] = true
+		}
+	}
+
+	programList := make([]string, 0, len(purchasedPrograms))
+	for program := range purchasedPrograms {
+		programList = append(programList, program)
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "Token refreshed successfully",
 		"token":   tokenString,
 		"user": models.UserResponse{
 			ID:                 user.ID,
@@ -442,7 +478,22 @@ func (uc *UserController) RequestPasswordReset(ctx *gin.Context) {
 		return
 	}
 
-	resetLink := fmt.Sprintf("%s/reset-password/%s", os.Getenv("ALLOWED_ORIGIN"), token)
+	allowedOrigin := os.Getenv("ALLOWED_ORIGIN")
+
+	// Extract the first URL from comma-separated list for reset links
+	var frontendURL string
+	if allowedOrigin != "" {
+		origins := strings.Split(allowedOrigin, ",")
+		frontendURL = strings.TrimSpace(origins[0]) // Use the first origin
+	} else {
+		frontendURL = "http://localhost:5052" // fallback
+	}
+
+	resetLink := fmt.Sprintf("%s/reset-password/%s", frontendURL, token)
+	log.Printf("Generated password reset link: %s", resetLink)
+	log.Printf("ALLOWED_ORIGIN env var: %s", allowedOrigin)
+	log.Printf("Using frontend URL: %s", frontendURL)
+
 	emailSubject := "LMW Fitness - Password Reset Request"
 	emailBody := emailtemplates.GeneratePasswordResetEmailBody(user.Email, resetLink)
 	smtpPassword := getSMTPPasswordFromSecrets()
