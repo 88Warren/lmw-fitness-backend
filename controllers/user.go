@@ -486,7 +486,8 @@ func (uc *UserController) RequestPasswordReset(ctx *gin.Context) {
 		origins := strings.Split(allowedOrigin, ",")
 		frontendURL = strings.TrimSpace(origins[0]) // Use the first origin
 	} else {
-		frontendURL = "http://localhost:5052" // fallback
+		// frontendURL = "http://localhost:5052"
+		frontendURL = "https://www.lmwfitness.co.uk"
 	}
 
 	resetLink := fmt.Sprintf("%s/reset-password/%s", frontendURL, token)
