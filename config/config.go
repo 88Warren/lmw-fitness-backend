@@ -80,7 +80,6 @@ func SetupServer() *gin.Engine {
 }
 
 func SetupHandlers(router *gin.Engine, db *gorm.DB) {
-	database.MigrateDB()
 	database.SeedDB(db)
 	// log.Println("Database models auto-migrated successfully.")
 
