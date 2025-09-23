@@ -24,6 +24,7 @@ func main() {
 	log.Printf("PORT: %s", os.Getenv("PORT"))
 
 	database.ConnectToDB()
+	database.MigrateDB()
 	db := database.GetDB()
 
 	router := config.SetupServer()
