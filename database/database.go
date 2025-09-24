@@ -49,9 +49,6 @@ func GetDB() *gorm.DB {
 func MigrateDB() {
 	log.Println("Starting database migration...")
 
-	// Run SQL migrations first
-	runSQLMigrations()
-
 	err := DB.AutoMigrate(
 		&models.AuthToken{},
 		&models.Job{},
@@ -72,33 +69,4 @@ func MigrateDB() {
 	}
 
 	log.Println("Database migration completed successfully")
-}
-
-func runSQLMigrations() {
-	log.Println("Running SQL migrations...")
-
-	// Create auth_tokens table if it doesn't exist
-	createAuthTokensSQL := `
-		CREATE TABLE IF NOT EXISTS auth_tokens (
-			id SERIAL PRIMARY KEY,
-			created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-			updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-			deleted_at TIMESTAMP WITH TIME ZONE,
-			user_id INTEGER,
-			token VARCHAR(64) UNIQUE,
-			program_name VARCHAR(255),
-			day_number INTEGER,
-			is_used BOOLEAN DEFAULT false,
-			session_id VARCHAR(255)
-		);
-		
-		CREATE INDEX IF NOT EXISTS idx_auth_tokens_user_id ON auth_tokens(user_id);
-		CREATE INDEX IF NOT EXISTS idx_auth_tokens_deleted_at ON auth_tokens(deleted_at);
-	`
-
-	if err := DB.Exec(createAuthTokensSQL).Error; err != nil {
-		log.Printf("Warning: Failed to create auth_tokens table: %v", err)
-	} else {
-		log.Println("auth_tokens table created successfully")
-	}
 }
