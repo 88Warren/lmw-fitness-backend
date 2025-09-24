@@ -346,12 +346,36 @@ func (pc *PaymentController) CreateCheckoutSession(ctx *gin.Context) {
 
 	// Add coupon if provided
 	if req.CouponCode != "" {
-		params.Discounts = []*stripe.CheckoutSessionDiscountParams{
-			{
-				Coupon: stripe.String(req.CouponCode),
-			},
+		// Try to find the promotion code first
+		promoParams := &stripe.PromotionCodeListParams{
+			Code: stripe.String(req.CouponCode),
 		}
-		log.Printf("Applied coupon code to checkout session: %s", req.CouponCode)
+
+		promoList := promotioncode.List(promoParams)
+		foundPromo := false
+		for promoList.Next() {
+			foundPromoCode := promoList.PromotionCode()
+			if foundPromoCode.Code == req.CouponCode {
+				params.Discounts = []*stripe.CheckoutSessionDiscountParams{
+					{
+						PromotionCode: stripe.String(foundPromoCode.ID),
+					},
+				}
+				log.Printf("Applied promotion code to checkout session: %s (ID: %s)", req.CouponCode, foundPromoCode.ID)
+				foundPromo = true
+				break
+			}
+		}
+
+		if !foundPromo {
+			// Fallback to coupon ID
+			params.Discounts = []*stripe.CheckoutSessionDiscountParams{
+				{
+					Coupon: stripe.String(req.CouponCode),
+				},
+			}
+			log.Printf("Applied coupon code to checkout session: %s", req.CouponCode)
+		}
 	}
 
 	if req.CustomerEmail != "" {
@@ -1166,40 +1190,51 @@ func (pc *PaymentController) ValidateCoupon(c *gin.Context) {
 	// First try to get it as a promotion code, then as a direct coupon
 	var stripeCoupon *stripe.Coupon
 	var err error
+	var foundPromoCode *stripe.PromotionCode
 
-	// Try to find promotion code by searching (since we can't get by code directly)
+	// Try to find promotion code by listing with code filter
 	promoParams := &stripe.PromotionCodeListParams{
 		Code: stripe.String(req.CouponCode),
 	}
+
 	promoIter := promotioncode.List(promoParams)
 
-	var foundPromoCode *stripe.PromotionCode
+	// Iterate through results to find exact match
 	for promoIter.Next() {
 		promo := promoIter.PromotionCode()
+		log.Printf("Found promotion code in list: %s (looking for: %s)", promo.Code, req.CouponCode)
 		if promo.Code == req.CouponCode {
 			foundPromoCode = promo
 			break
 		}
 	}
 
+	// Check for iteration errors
+	if promoIter.Err() != nil {
+		log.Printf("Error iterating promotion codes: %v", promoIter.Err())
+	}
+
 	if foundPromoCode != nil && foundPromoCode.Coupon != nil {
 		stripeCoupon = foundPromoCode.Coupon
-		log.Printf("Found promotion code: %s, coupon: %s", req.CouponCode, stripeCoupon.ID)
+		log.Printf("Using coupon from promotion code: %s -> %s", req.CouponCode, stripeCoupon.ID)
 	} else {
 		// If not found as promotion code, try as direct coupon ID
+		log.Printf("Promotion code not found, trying as direct coupon ID: %s", req.CouponCode)
 		stripeCoupon, err = coupon.Get(req.CouponCode, nil)
 		if err != nil {
 			log.Printf("Stripe coupon/promotion code retrieval error: %v", err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid coupon code"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Coupon '%s' not found", req.CouponCode)})
 			return
 		}
 		log.Printf("Found direct coupon: %s", stripeCoupon.ID)
 	}
 
-	log.Printf("Retrieved coupon from Stripe: %+v", stripeCoupon)
+	log.Printf("Retrieved coupon from Stripe: ID=%s, Valid=%v, AmountOff=%d, PercentOff=%f",
+		stripeCoupon.ID, stripeCoupon.Valid, stripeCoupon.AmountOff, stripeCoupon.PercentOff)
 
 	// Check if coupon is valid (not expired, etc.)
 	if !stripeCoupon.Valid {
+		log.Printf("Coupon is not valid: %s", stripeCoupon.ID)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Coupon has expired or is no longer valid"})
 		return
 	}
@@ -1209,16 +1244,20 @@ func (pc *PaymentController) ValidateCoupon(c *gin.Context) {
 	if stripeCoupon.AmountOff > 0 {
 		// Fixed amount discount (in pence, convert to pounds)
 		discountAmount = float64(stripeCoupon.AmountOff) / 100
+		log.Printf("Fixed amount discount: %d pence = £%.2f", stripeCoupon.AmountOff, discountAmount)
 	} else if stripeCoupon.PercentOff > 0 {
 		// Percentage discount
 		discountAmount = req.CartTotal * (stripeCoupon.PercentOff / 100)
+		log.Printf("Percentage discount: %.1f%% of £%.2f = £%.2f", stripeCoupon.PercentOff, req.CartTotal, discountAmount)
 	} else {
+		log.Printf("Invalid coupon configuration - no amount_off or percent_off")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid coupon configuration"})
 		return
 	}
 
 	// Ensure discount doesn't exceed cart total
 	if discountAmount > req.CartTotal {
+		log.Printf("Discount amount £%.2f exceeds cart total £%.2f, capping at cart total", discountAmount, req.CartTotal)
 		discountAmount = req.CartTotal
 	}
 
