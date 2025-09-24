@@ -32,6 +32,9 @@ COPY --from=builder /app/main .
 # Copy the images directory
 COPY --from=builder /app/images ./images
 
+# Copy the database content directory for blog seeding
+COPY --from=builder /app/database/content ./database/content
+
 # Expose the application port
 EXPOSE 8082
 
