@@ -12,5 +12,6 @@ func RegisterPaymentRoutes(router *gin.Engine, pc *controllers.PaymentController
 		api.POST("/stripe-webhook", pc.StripeWebhook)
 		api.GET("/test-webhook", pc.TestWebhook)
 		api.POST("/get-workout-link", pc.GetWorkoutLink)
+		api.POST("/validate-coupon", pc.ValidateCoupon)
 	}
 }
