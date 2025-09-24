@@ -2,6 +2,7 @@ package database
 
 import (
 	"log"
+	"os"
 	"time"
 
 	"github.com/88warren/lmw-fitness-backend/models"
@@ -15,8 +16,16 @@ func UserSeed(db *gorm.DB) {
 }
 
 func seedAdminUser(db *gorm.DB) {
-	adminEmail := "admin@lmwfitness.co.uk"
-	adminPassword := "AdminPassword123!"
+	adminEmail := os.Getenv("ADMIN_EMAIL")
+	if adminEmail == "" {
+		adminEmail = "admin@lmwfitness.co.uk"
+	}
+
+	adminPassword := os.Getenv("ADMIN_PASSWORD")
+	if adminPassword == "" {
+		log.Printf("Warning: ADMIN_PASSWORD not set, skipping admin user creation")
+		return
+	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.DefaultCost)
 	if err != nil {
@@ -76,8 +85,16 @@ func seedAdminUser(db *gorm.DB) {
 }
 
 func seedGenericUser(db *gorm.DB) {
-	userEmail := "user@example.com"
-	userPassword := "UserPassword123!"
+	userEmail := os.Getenv("SEED_USER_EMAIL")
+	if userEmail == "" {
+		userEmail = "user@example.com"
+	}
+
+	userPassword := os.Getenv("SEED_USER_PASSWORD")
+	if userPassword == "" {
+		log.Printf("Warning: SEED_USER_PASSWORD not set, skipping generic user creation")
+		return
+	}
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userPassword), bcrypt.DefaultCost)
 	if err != nil {
 		log.Printf("Failed to hash user password: %v", err)
