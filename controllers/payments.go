@@ -347,8 +347,11 @@ func (pc *PaymentController) CreateCheckoutSession(ctx *gin.Context) {
 	if req.CouponCode != "" {
 		// Try to find the promotion code first
 		promoParams := &stripe.PromotionCodeListParams{
-			Code: stripe.String(req.CouponCode),
+			Code:   stripe.String(req.CouponCode),
+			Active: stripe.Bool(true),
 		}
+		// Ensure coupon object is included so we can compute the discount
+		promoParams.AddExpand("data.coupon")
 
 		promoList := promotioncode.List(promoParams)
 		foundPromo := false
@@ -1201,8 +1204,10 @@ func (pc *PaymentController) ValidateCoupon(c *gin.Context) {
 
 	for promoIter.Next() {
 		promo := promoIter.PromotionCode()
-		if promo.Code == req.CouponCode && promo.Coupon != nil {
-			stripeCoupon = promo.Coupon
+		if strings.EqualFold(promo.Code, req.CouponCode) {
+			if promo.Coupon != nil && promo.Coupon.ID != "" {
+				stripeCoupon = promo.Coupon
+			}
 			break
 		}
 	}
