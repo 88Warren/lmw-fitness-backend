@@ -31,6 +31,14 @@ func ConnectToDB() {
 		DB, err = gorm.Open(postgres.Open(dns), &gorm.Config{})
 		if err == nil {
 			// log.Println("Database connection established")
+			sqlDB, err := DB.DB()
+			if err != nil {
+				log.Fatalf("failed to get generic database object: %v", err)
+			}
+			sqlDB.SetMaxIdleConns(10)
+			sqlDB.SetMaxOpenConns(100)
+			sqlDB.SetConnMaxLifetime(time.Hour)
+			log.Println("Database connection established and pool configured.")
 			return
 		}
 		log.Printf("Failed to connect to database (attempt %d/%d): %v", i+1, maxRetries, err)
