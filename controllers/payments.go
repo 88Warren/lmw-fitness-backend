@@ -19,7 +19,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stripe/stripe-go/v82"
 	"github.com/stripe/stripe-go/v82/client"
-	"github.com/stripe/stripe-go/v82/promotioncode"
 	"github.com/stripe/stripe-go/v82/webhook"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -345,19 +344,18 @@ func (pc *PaymentController) CreateCheckoutSession(ctx *gin.Context) {
 
 	// Add coupon if provided
 	if req.CouponCode != "" {
-		// Try to find the promotion code first
+		// Try to find the promotion code first using the authenticated client
 		promoParams := &stripe.PromotionCodeListParams{
 			Code:   stripe.String(req.CouponCode),
 			Active: stripe.Bool(true),
 		}
-		// Ensure coupon object is included so we can compute the discount
 		promoParams.AddExpand("data.coupon")
 
-		promoList := promotioncode.List(promoParams)
+		promoList := pc.StripeClient.PromotionCodes.List(promoParams)
 		foundPromo := false
 		for promoList.Next() {
 			foundPromoCode := promoList.PromotionCode()
-			if foundPromoCode.Code == req.CouponCode {
+			if strings.EqualFold(foundPromoCode.Code, req.CouponCode) {
 				params.Discounts = []*stripe.CheckoutSessionDiscountParams{
 					{
 						PromotionCode: stripe.String(foundPromoCode.ID),
@@ -370,13 +368,17 @@ func (pc *PaymentController) CreateCheckoutSession(ctx *gin.Context) {
 		}
 
 		if !foundPromo {
-			// Fallback to coupon ID
-			params.Discounts = []*stripe.CheckoutSessionDiscountParams{
-				{
-					Coupon: stripe.String(req.CouponCode),
-				},
+			// Fallback to coupon ID only if the code is an actual coupon ID
+			if cpn, err := pc.StripeClient.Coupons.Get(req.CouponCode, nil); err == nil && cpn != nil && cpn.ID != "" {
+				params.Discounts = []*stripe.CheckoutSessionDiscountParams{
+					{
+						Coupon: stripe.String(cpn.ID),
+					},
+				}
+				log.Printf("Applied coupon to checkout session by ID: %s", cpn.ID)
+			} else {
+				log.Printf("Coupon/promotion code not found for checkout session: %s", req.CouponCode)
 			}
-			log.Printf("Applied coupon code to checkout session: %s", req.CouponCode)
 		}
 	}
 
