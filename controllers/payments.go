@@ -19,8 +19,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stripe/stripe-go/v82"
 	"github.com/stripe/stripe-go/v82/client"
-	"github.com/stripe/stripe-go/v82/coupon"
-	"github.com/stripe/stripe-go/v82/promotioncode"
 	"github.com/stripe/stripe-go/v82/webhook"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -346,16 +344,18 @@ func (pc *PaymentController) CreateCheckoutSession(ctx *gin.Context) {
 
 	// Add coupon if provided
 	if req.CouponCode != "" {
-		// Try to find the promotion code first
+		// Try to find the promotion code first using the authenticated client
 		promoParams := &stripe.PromotionCodeListParams{
-			Code: stripe.String(req.CouponCode),
+			Code:   stripe.String(req.CouponCode),
+			Active: stripe.Bool(true),
 		}
+		promoParams.AddExpand("data.coupon")
 
-		promoList := promotioncode.List(promoParams)
+		promoList := pc.StripeClient.PromotionCodes.List(promoParams)
 		foundPromo := false
 		for promoList.Next() {
 			foundPromoCode := promoList.PromotionCode()
-			if foundPromoCode.Code == req.CouponCode {
+			if strings.EqualFold(foundPromoCode.Code, req.CouponCode) {
 				params.Discounts = []*stripe.CheckoutSessionDiscountParams{
 					{
 						PromotionCode: stripe.String(foundPromoCode.ID),
@@ -368,13 +368,17 @@ func (pc *PaymentController) CreateCheckoutSession(ctx *gin.Context) {
 		}
 
 		if !foundPromo {
-			// Fallback to coupon ID
-			params.Discounts = []*stripe.CheckoutSessionDiscountParams{
-				{
-					Coupon: stripe.String(req.CouponCode),
-				},
+			// Fallback to coupon ID only if the code is an actual coupon ID
+			if cpn, err := pc.StripeClient.Coupons.Get(req.CouponCode, nil); err == nil && cpn != nil && cpn.ID != "" {
+				params.Discounts = []*stripe.CheckoutSessionDiscountParams{
+					{
+						Coupon: stripe.String(cpn.ID),
+					},
+				}
+				log.Printf("Applied coupon to checkout session by ID: %s", cpn.ID)
+			} else {
+				log.Printf("Coupon/promotion code not found for checkout session: %s", req.CouponCode)
 			}
-			log.Printf("Applied coupon code to checkout session: %s", req.CouponCode)
 		}
 	}
 
@@ -1196,21 +1200,23 @@ func (pc *PaymentController) ValidateCoupon(c *gin.Context) {
 		Code: stripe.String(req.CouponCode),
 	}
 
-	promoIter := promotioncode.List(promoParams)
+	promoIter := pc.StripeClient.PromotionCodes.List(promoParams)
 
 	// Iterate through results to find exact match
 
 	for promoIter.Next() {
 		promo := promoIter.PromotionCode()
-		if promo.Code == req.CouponCode && promo.Coupon != nil {
-			stripeCoupon = promo.Coupon
+		if strings.EqualFold(promo.Code, req.CouponCode) {
+			if promo.Coupon != nil && promo.Coupon.ID != "" {
+				stripeCoupon = promo.Coupon
+			}
 			break
 		}
 	}
 
 	// Check for iteration errors
 	if stripeCoupon == nil {
-		stripeCoupon, err = coupon.Get(req.CouponCode, nil)
+		stripeCoupon, err = pc.StripeClient.Coupons.Get(req.CouponCode, nil)
 		if err != nil {
 			stripeCoupon = nil // Reset if failed
 		}
@@ -1220,7 +1226,7 @@ func (pc *PaymentController) ValidateCoupon(c *gin.Context) {
 		// Based on your JSON, try the actual coupon ID
 		possibleCouponIDs := []string{"2vfoih63"}
 		for _, couponID := range possibleCouponIDs {
-			if testCoupon, testErr := coupon.Get(couponID, nil); testErr == nil {
+			if testCoupon, testErr := pc.StripeClient.Coupons.Get(couponID, nil); testErr == nil {
 				stripeCoupon = testCoupon
 				break
 			}
