@@ -19,7 +19,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stripe/stripe-go/v82"
 	"github.com/stripe/stripe-go/v82/client"
-	"github.com/stripe/stripe-go/v82/coupon"
 	"github.com/stripe/stripe-go/v82/promotioncode"
 	"github.com/stripe/stripe-go/v82/webhook"
 	"golang.org/x/crypto/bcrypt"
@@ -1196,7 +1195,7 @@ func (pc *PaymentController) ValidateCoupon(c *gin.Context) {
 		Code: stripe.String(req.CouponCode),
 	}
 
-	promoIter := promotioncode.List(promoParams)
+	promoIter := pc.StripeClient.PromotionCodes.List(promoParams)
 
 	// Iterate through results to find exact match
 
@@ -1210,7 +1209,7 @@ func (pc *PaymentController) ValidateCoupon(c *gin.Context) {
 
 	// Check for iteration errors
 	if stripeCoupon == nil {
-		stripeCoupon, err = coupon.Get(req.CouponCode, nil)
+		stripeCoupon, err = pc.StripeClient.Coupons.Get(req.CouponCode, nil)
 		if err != nil {
 			stripeCoupon = nil // Reset if failed
 		}
@@ -1220,7 +1219,7 @@ func (pc *PaymentController) ValidateCoupon(c *gin.Context) {
 		// Based on your JSON, try the actual coupon ID
 		possibleCouponIDs := []string{"2vfoih63"}
 		for _, couponID := range possibleCouponIDs {
-			if testCoupon, testErr := coupon.Get(couponID, nil); testErr == nil {
+			if testCoupon, testErr := pc.StripeClient.Coupons.Get(couponID, nil); testErr == nil {
 				stripeCoupon = testCoupon
 				break
 			}
