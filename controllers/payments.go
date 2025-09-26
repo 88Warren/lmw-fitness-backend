@@ -819,6 +819,24 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 				log.Printf("User %d already has access to program %d. Skipping creation.", userID, beginnerProgramID)
 			}
 
+			// Ensure ProgramStartDates is set so Day 1 unlocks immediately on profile
+			var beginnerUser models.User
+			if err := pc.DB.First(&beginnerUser, userID).Error; err == nil {
+				if beginnerUser.ProgramStartDates == nil {
+					beginnerUser.ProgramStartDates = make(map[string]time.Time)
+				}
+				if beginnerUser.ProgramStartDates["beginner-program"].IsZero() {
+					beginnerUser.ProgramStartDates["beginner-program"] = time.Now()
+					if saveErr := pc.DB.Save(&beginnerUser).Error; saveErr != nil {
+						log.Printf("Error saving ProgramStartDates for user %d beginner-program: %v", userID, saveErr)
+					} else {
+						log.Printf("Initialized ProgramStartDates for user %d beginner-program to today", userID)
+					}
+				}
+			} else {
+				log.Printf("Error fetching user %d to set ProgramStartDates: %v", userID, err)
+			}
+
 			const programName = "beginner-program"
 			const dayNumber = 1
 			token, err := pc.CreateAuthToken(userID, programName, dayNumber, checkoutSession.ID)
@@ -873,6 +891,24 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 				log.Printf("Error checking for existing UserProgram: %v", err)
 			} else {
 				log.Printf("User %d already has access to program %d. Skipping creation.", userID, advancedProgramID)
+			}
+
+			// Ensure ProgramStartDates is set so Day 1 unlocks immediately on profile
+			var advancedUser models.User
+			if err := pc.DB.First(&advancedUser, userID).Error; err == nil {
+				if advancedUser.ProgramStartDates == nil {
+					advancedUser.ProgramStartDates = make(map[string]time.Time)
+				}
+				if advancedUser.ProgramStartDates["advanced-program"].IsZero() {
+					advancedUser.ProgramStartDates["advanced-program"] = time.Now()
+					if saveErr := pc.DB.Save(&advancedUser).Error; saveErr != nil {
+						log.Printf("Error saving ProgramStartDates for user %d advanced-program: %v", userID, saveErr)
+					} else {
+						log.Printf("Initialized ProgramStartDates for user %d advanced-program to today", userID)
+					}
+				}
+			} else {
+				log.Printf("Error fetching user %d to set ProgramStartDates: %v", userID, err)
 			}
 
 			const programName = "advanced-program"
