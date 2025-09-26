@@ -393,7 +393,8 @@ func (pc *PaymentController) CreateCheckoutSession(ctx *gin.Context) {
 
 	customerEmail := "not provided"
 	if params.CustomerEmail != nil {
-		customerEmail = *params.CustomerEmail
+		customerEmail = strings.ToLower(strings.TrimSpace(*params.CustomerEmail))
+		params.CustomerEmail = stripe.String(customerEmail)
 	}
 	log.Printf("Creating checkout session with params: %+v, CustomerEmail value: %s", params, customerEmail)
 
