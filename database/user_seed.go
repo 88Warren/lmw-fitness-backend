@@ -63,7 +63,7 @@ func seedAdminUser(db *gorm.DB) {
 		adminUserID = adminUser.ID
 		// log.Printf("Admin user '%s' created successfully.", adminUser.Email)
 	case nil:
-		existingUser.PasswordHash = adminUser.PasswordHash
+		// Don't overwrite password for existing users - only update role and other data
 		existingUser.Role = "admin"
 		existingUser.MustChangePassword = false
 		existingUser.CompletedDays = adminUser.CompletedDays
@@ -75,7 +75,7 @@ func seedAdminUser(db *gorm.DB) {
 		}
 		db.Model(&existingUser).Update("must_change_password", false)
 		adminUserID = existingUser.ID
-		// log.Printf("Admin user '%s' updated successfully.", existingUser.Email)
+		log.Printf("Admin user '%s' updated (password preserved).", existingUser.Email)
 	default:
 		log.Printf("Database error checking for admin user: %v", result.Error)
 		return
@@ -134,7 +134,7 @@ func seedGenericUser(db *gorm.DB) {
 		userID = genericUser.ID
 		// log.Printf("Generic user '%s' created successfully.", genericUser.Email)
 	case nil:
-		existingUser.PasswordHash = genericUser.PasswordHash
+		// Don't overwrite password for existing users - only update role and other data
 		existingUser.Role = "user"
 		existingUser.MustChangePassword = false
 		existingUser.CompletedDays = genericUser.CompletedDays
@@ -146,7 +146,7 @@ func seedGenericUser(db *gorm.DB) {
 		}
 		db.Model(&existingUser).Update("must_change_password", false)
 		userID = existingUser.ID
-		// log.Printf("Generic user '%s' updated successfully.", existingUser.Email)
+		log.Printf("Generic user '%s' updated (password preserved).", existingUser.Email)
 	default:
 		log.Printf("Database error checking for generic user: %v", result.Error)
 		return
