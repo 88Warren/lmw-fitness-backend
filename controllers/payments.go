@@ -747,6 +747,9 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 
 	purchasedPriceIDs := []string{}
 	purchasedProductNames := []string{}
+	// Track whether we already sent the Day 1 email for each program to avoid duplicates
+	sentBeginnerEmail := false
+	sentAdvancedEmail := false
 	for lineItemIterator.Next() {
 		li := lineItemIterator.LineItem()
 		log.Printf("[DEBUG] Processing line item: ID=%s, Description=%s, Quantity=%d",
@@ -858,6 +861,7 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 						log.Printf("Error sending beginner program email: %v", err)
 					} else {
 						log.Printf("Successfully sent Day 1 email with secure link to %s", customerEmail)
+						sentBeginnerEmail = true
 					}
 				} else {
 					log.Printf("Brevo Beginner Program Template ID not configured. Skipping email for %s", customerEmail)
@@ -940,6 +944,7 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 						log.Printf("Error sending advanced program email: %v", err)
 					} else {
 						log.Printf("Successfully sent Day 1 email with secure link for Advanced Program to %s", customerEmail)
+						sentAdvancedEmail = true
 					}
 				} else {
 					log.Printf("Brevo Advanced Program Template ID not configured. Skipping email for %s", customerEmail)
@@ -1025,6 +1030,15 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 	}
 
 	for templateID := range emailTemplatesToSend {
+		// Skip templates we've already sent above to avoid duplicates
+		if sentBeginnerEmail && templateID == pc.BrevoBeginnerProgramTemplateID {
+			log.Printf("Skipping duplicate beginner program email (Template ID: %d) - already sent.", templateID)
+			continue
+		}
+		if sentAdvancedEmail && templateID == pc.BrevoAdvancedProgramTemplateID {
+			log.Printf("Skipping duplicate advanced program email (Template ID: %d) - already sent.", templateID)
+			continue
+		}
 		log.Printf("Attempting to send transactional email with Template ID: %d to %s", templateID, customerEmail)
 		emailParams := map[string]interface{}{
 			"CUSTOMER_EMAIL":  customerEmail,
