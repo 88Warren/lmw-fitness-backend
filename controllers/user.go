@@ -508,6 +508,10 @@ func (uc *UserController) RequestPasswordReset(ctx *gin.Context) {
 	emailBody := emailtemplates.GeneratePasswordResetEmailBody(user.Email, resetLink)
 	smtpPassword := getSMTPPasswordFromSecrets()
 
+	log.Printf("Attempting to send password reset email to: %s", user.Email)
+	log.Printf("SMTP Host: %s, Port: %s, Username: %s", os.Getenv("SMTP_HOST"), os.Getenv("SMTP_PORT"), os.Getenv("SMTP_USERNAME"))
+	log.Printf("SMTP Password retrieved: %v", smtpPassword != "")
+
 	if err := email.SendEmail(
 		os.Getenv("SMTP_FROM"),
 		user.Email,
@@ -516,10 +520,12 @@ func (uc *UserController) RequestPasswordReset(ctx *gin.Context) {
 		"",
 		smtpPassword,
 	); err != nil {
-		log.Printf("Error sending password reset email: %v", err)
+		log.Printf("Error sending password reset email to %s: %v", user.Email, err)
 		ctx.JSON(http.StatusOK, gin.H{"message": "If an account with that email exists, a password reset link has been sent."})
 		return
 	}
+
+	log.Printf("Password reset email sent successfully to: %s", user.Email)
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "If an account with that email exists, a password reset link has been sent."})
 }
@@ -648,26 +654,39 @@ func generateSecureToken(length int) (string, error) {
 
 func getSMTPPasswordFromSecrets() string {
 	if os.Getenv("KUBERNETES_SERVICE_HOST") == "" {
-		return os.Getenv("SMTP_PASSWORD")
+		log.Printf("Not running in Kubernetes, using SMTP_PASSWORD env var")
+		password := os.Getenv("SMTP_PASSWORD")
+		if password == "" {
+			log.Printf("WARNING: SMTP_PASSWORD environment variable is empty")
+		}
+		return password
 	}
 
+	log.Printf("Running in Kubernetes, retrieving SMTP password from secrets")
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		log.Fatalf("Failed to load cluster config: %v", err)
+		log.Printf("Failed to load cluster config: %v", err)
+		return ""
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		log.Fatalf("Failed to create Kubernetes client: %v", err)
+		log.Printf("Failed to create Kubernetes client: %v", err)
+		return ""
 	}
 
 	ctx := context.TODO()
 	secret, err := clientset.CoreV1().Secrets("lmw-fitness").Get(ctx, "lmw-fitness-api-secrets", metav1.GetOptions{})
 	if err != nil {
-		log.Fatalf("Failed to get secret: %v", err)
+		log.Printf("Failed to get secret: %v", err)
+		return ""
 	}
 
-	return string(secret.Data["SMTP_PASSWORD"])
+	password := string(secret.Data["SMTP_PASSWORD"])
+	if password == "" {
+		log.Printf("WARNING: SMTP_PASSWORD from Kubernetes secret is empty")
+	}
+	return password
 }
 
 func (uc *UserController) VerifyWorkoutToken(ctx *gin.Context) {
