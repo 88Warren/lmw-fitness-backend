@@ -48,13 +48,16 @@ func (uc *UserController) RegisterUser(ctx *gin.Context) {
 		return
 	}
 
+	// Normalize email to prevent duplicate accounts with different casing
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+
 	if err := ValidatePassword(req.Password); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	var existingUser models.User
-	if err := uc.DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
+	if err := uc.DB.Where("LOWER(email) = ?", req.Email).First(&existingUser).Error; err == nil {
 		ctx.JSON(http.StatusConflict, gin.H{"error": "User with this email already exists"})
 		return
 	} else if err != gorm.ErrRecordNotFound {
@@ -118,8 +121,11 @@ func (uc *UserController) LoginUser(ctx *gin.Context) {
 		return
 	}
 
+	// Normalize email to be case-insensitive for login
+	normalizedEmail := strings.ToLower(strings.TrimSpace(req.Email))
+
 	var user models.User
-	if result := uc.DB.Preload("AuthTokens").Where("email = ?", req.Email).First(&user); result.Error != nil {
+	if result := uc.DB.Preload("AuthTokens").Where("LOWER(email) = ?", normalizedEmail).First(&user); result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 			return
@@ -445,8 +451,11 @@ func (uc *UserController) RequestPasswordReset(ctx *gin.Context) {
 		return
 	}
 
+	// Normalize incoming email and perform case-insensitive lookup
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+
 	var user models.User
-	if result := uc.DB.Where("email = ?", req.Email).First(&user); result.Error != nil {
+	if result := uc.DB.Where("LOWER(email) = ?", req.Email).First(&user); result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusOK, gin.H{"message": "If an account with that email exists, a password reset link has been sent."})
 			return
