@@ -1039,13 +1039,27 @@ func (pc *PaymentController) ProcessPaymentSuccess(sessionID string, customerEma
 
 	if pc.BrevoOrderConfirmationTemplateID != 0 {
 		log.Printf("Attempting to send order confirmation email (Template ID: %d) to %s", pc.BrevoOrderConfirmationTemplateID, customerEmail)
+		// Build params expected by the Brevo template (Docs/Emails/Confirmation/Order-confirmation.html)
+		// Template expects: ORDER_ID, ORDER_DATE, TOTAL_PAID, ITEM_NAME_1, ITEM_NAME_2
+		orderTotal := fmt.Sprintf("%.2f", float64(checkoutSession.AmountTotal)/100.0)
+		if strings.EqualFold(string(checkoutSession.Currency), "gbp") {
+			orderTotal = "£" + orderTotal
+		}
+
+		var item1, item2 string
+		if len(purchasedProductNames) > 0 {
+			item1 = purchasedProductNames[0]
+		}
+		if len(purchasedProductNames) > 1 {
+			item2 = purchasedProductNames[1]
+		}
+
 		orderConfirmationParams := map[string]interface{}{
-			"ORDER_ID":       checkoutSession.ID,
-			"CUSTOMER_EMAIL": customerEmail,
-			"TOTAL_AMOUNT":   fmt.Sprintf("%.2f", float64(checkoutSession.AmountTotal)/100.0),
-			"CURRENCY":       checkoutSession.Currency,
-			"PRODUCT_NAMES":  purchasedProductNames,
-			"PURCHASE_DATE":  time.Unix(checkoutSession.Created, 0).Format("2006-01-02"),
+			"ORDER_ID":    checkoutSession.ID,
+			"ORDER_DATE":  time.Unix(checkoutSession.Created, 0).Format("2006-01-02"),
+			"TOTAL_PAID":  orderTotal,
+			"ITEM_NAME_1": item1,
+			"ITEM_NAME_2": item2,
 		}
 		err = pc.SendBrevoTransactionalEmail(customerEmail, pc.BrevoOrderConfirmationTemplateID, orderConfirmationParams)
 		if err != nil {
