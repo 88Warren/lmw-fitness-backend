@@ -25,7 +25,7 @@ func TestCreateCheckoutSession(t *testing.T) {
 
 	requestBody := map[string]interface{}{
 		"priceId": "price_test_123",
-		"email":   "test@example.com",
+		"email":   "info@lmwfitness.co.uk",
 	}
 
 	jsonBody, _ := json.Marshal(requestBody)

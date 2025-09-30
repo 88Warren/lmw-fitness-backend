@@ -487,21 +487,22 @@ func (uc *UserController) RequestPasswordReset(ctx *gin.Context) {
 		return
 	}
 
-	allowedOrigin := os.Getenv("ALLOWED_ORIGIN")
-
-	// Extract the first URL from comma-separated list for reset links
-	var frontendURL string
-	if allowedOrigin != "" {
-		origins := strings.Split(allowedOrigin, ",")
-		frontendURL = strings.TrimSpace(origins[0]) // Use the first origin
-	} else {
-		// frontendURL = "http://localhost:5052"
-		frontendURL = "https://www.lmwfitness.co.uk"
+	// Use FRONTEND_URL if available, otherwise fall back to ALLOWED_ORIGIN
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		allowedOrigin := os.Getenv("ALLOWED_ORIGIN")
+		if allowedOrigin != "" {
+			origins := strings.Split(allowedOrigin, ",")
+			frontendURL = strings.TrimSpace(origins[0]) // Use the first origin
+		} else {
+			frontendURL = "https://www.lmwfitness.co.uk"
+		}
 	}
 
 	resetLink := fmt.Sprintf("%s/reset-password/%s", frontendURL, token)
 	log.Printf("Generated password reset link: %s", resetLink)
-	log.Printf("ALLOWED_ORIGIN env var: %s", allowedOrigin)
+	log.Printf("FRONTEND_URL env var: %s", os.Getenv("FRONTEND_URL"))
+	log.Printf("ALLOWED_ORIGIN env var: %s", os.Getenv("ALLOWED_ORIGIN"))
 	log.Printf("Using frontend URL: %s", frontendURL)
 
 	emailSubject := "LMW Fitness - Password Reset Request"
@@ -510,7 +511,16 @@ func (uc *UserController) RequestPasswordReset(ctx *gin.Context) {
 
 	log.Printf("Attempting to send password reset email to: %s", user.Email)
 	log.Printf("SMTP Host: %s, Port: %s, Username: %s", os.Getenv("SMTP_HOST"), os.Getenv("SMTP_PORT"), os.Getenv("SMTP_USERNAME"))
+	log.Printf("SMTP From: %s", os.Getenv("SMTP_FROM"))
 	log.Printf("SMTP Password retrieved: %v", smtpPassword != "")
+
+	// Validate SMTP configuration
+	if os.Getenv("SMTP_HOST") == "" || os.Getenv("SMTP_PORT") == "" || os.Getenv("SMTP_USERNAME") == "" || smtpPassword == "" {
+		log.Printf("ERROR: Missing SMTP configuration - Host: %s, Port: %s, Username: %s, Password: %v",
+			os.Getenv("SMTP_HOST"), os.Getenv("SMTP_PORT"), os.Getenv("SMTP_USERNAME"), smtpPassword != "")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Email service configuration error"})
+		return
+	}
 
 	if err := email.SendEmail(
 		os.Getenv("SMTP_FROM"),
@@ -521,6 +531,8 @@ func (uc *UserController) RequestPasswordReset(ctx *gin.Context) {
 		smtpPassword,
 	); err != nil {
 		log.Printf("Error sending password reset email to %s: %v", user.Email, err)
+		// In production, we still return success to prevent email enumeration attacks
+		// but log the actual error for debugging
 		ctx.JSON(http.StatusOK, gin.H{"message": "If an account with that email exists, a password reset link has been sent."})
 		return
 	}
@@ -658,6 +670,8 @@ func getSMTPPasswordFromSecrets() string {
 		password := os.Getenv("SMTP_PASSWORD")
 		if password == "" {
 			log.Printf("WARNING: SMTP_PASSWORD environment variable is empty")
+		} else {
+			log.Printf("SMTP_PASSWORD loaded from environment variable (length: %d)", len(password))
 		}
 		return password
 	}
@@ -665,26 +679,50 @@ func getSMTPPasswordFromSecrets() string {
 	log.Printf("Running in Kubernetes, retrieving SMTP password from secrets")
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		log.Printf("Failed to load cluster config: %v", err)
-		return ""
+		log.Printf("Failed to load cluster config: %v, falling back to env var", err)
+		password := os.Getenv("SMTP_PASSWORD")
+		if password == "" {
+			log.Printf("WARNING: Fallback SMTP_PASSWORD environment variable is also empty")
+		}
+		return password
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		log.Printf("Failed to create Kubernetes client: %v", err)
-		return ""
+		log.Printf("Failed to create Kubernetes client: %v, falling back to env var", err)
+		password := os.Getenv("SMTP_PASSWORD")
+		if password == "" {
+			log.Printf("WARNING: Fallback SMTP_PASSWORD environment variable is also empty")
+		}
+		return password
 	}
 
 	ctx := context.TODO()
-	secret, err := clientset.CoreV1().Secrets("lmw-fitness").Get(ctx, "lmw-fitness-api-secrets", metav1.GetOptions{})
+	secretName := os.Getenv("SECRET_NAME")
+	if secretName == "" {
+		secretName = "lmw-fitness-api-secrets" // fallback to old name
+	}
+	log.Printf("Attempting to retrieve secret: %s from namespace: lmw-fitness", secretName)
+
+	secret, err := clientset.CoreV1().Secrets("lmw-fitness").Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
-		log.Printf("Failed to get secret: %v", err)
-		return ""
+		log.Printf("Failed to get secret: %v, falling back to env var", err)
+		password := os.Getenv("SMTP_PASSWORD")
+		if password == "" {
+			log.Printf("WARNING: Fallback SMTP_PASSWORD environment variable is also empty")
+		}
+		return password
 	}
 
 	password := string(secret.Data["SMTP_PASSWORD"])
 	if password == "" {
-		log.Printf("WARNING: SMTP_PASSWORD from Kubernetes secret is empty")
+		log.Printf("WARNING: SMTP_PASSWORD from Kubernetes secret is empty, falling back to env var")
+		password = os.Getenv("SMTP_PASSWORD")
+		if password == "" {
+			log.Printf("WARNING: Fallback SMTP_PASSWORD environment variable is also empty")
+		}
+	} else {
+		log.Printf("SMTP_PASSWORD loaded from Kubernetes secret (length: %d)", len(password))
 	}
 	return password
 }
