@@ -16,6 +16,7 @@ func RegisterUserRoutes(router *gin.Engine, uc *controllers.UserController) {
 		api.POST("/reset-password", uc.ResetPassword)
 		api.POST("/verify-workout-token", uc.VerifyWorkoutToken)
 		api.POST("/refresh-token", middleware.AuthMiddleware(), uc.RefreshToken)
+		api.POST("/test-email", uc.TestEmail) // Test endpoint for SMTP debugging
 	}
 	authenticated := api.Group("")
 	authenticated.Use(middleware.AuthMiddleware())

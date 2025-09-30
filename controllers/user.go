@@ -888,3 +888,61 @@ func (uc *UserController) SetFirstTimePassword(ctx *gin.Context) {
 		},
 	})
 }
+
+func (uc *UserController) TestEmail(ctx *gin.Context) {
+	var req struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	smtpPassword := getSMTPPasswordFromSecrets()
+
+	log.Printf("Testing email functionality...")
+	log.Printf("SMTP Host: %s, Port: %s, Username: %s", os.Getenv("SMTP_HOST"), os.Getenv("SMTP_PORT"), os.Getenv("SMTP_USERNAME"))
+	log.Printf("SMTP From: %s", os.Getenv("SMTP_FROM"))
+	log.Printf("SMTP Password retrieved: %v", smtpPassword != "")
+
+	// Validate SMTP configuration
+	if os.Getenv("SMTP_HOST") == "" || os.Getenv("SMTP_PORT") == "" || os.Getenv("SMTP_USERNAME") == "" || smtpPassword == "" {
+		log.Printf("ERROR: Missing SMTP configuration - Host: %s, Port: %s, Username: %s, Password: %v",
+			os.Getenv("SMTP_HOST"), os.Getenv("SMTP_PORT"), os.Getenv("SMTP_USERNAME"), smtpPassword != "")
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Email service configuration error"})
+		return
+	}
+
+	emailSubject := "LMW Fitness - Test Email"
+	emailBody := `
+	<!DOCTYPE html>
+	<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Test Email</title>
+	</head>
+	<body>
+		<h1>Test Email</h1>
+		<p>This is a test email to verify SMTP configuration is working correctly.</p>
+		<p>If you receive this email, the SMTP settings are configured properly.</p>
+		<p>Timestamp: ` + time.Now().Format("2006-01-02 15:04:05 UTC") + `</p>
+	</body>
+	</html>
+	`
+
+	if err := email.SendEmail(
+		os.Getenv("SMTP_FROM"),
+		req.Email,
+		emailSubject,
+		emailBody,
+		"",
+		smtpPassword,
+	); err != nil {
+		log.Printf("Error sending test email to %s: %v", req.Email, err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to send test email: %v", err)})
+		return
+	}
+
+	log.Printf("Test email sent successfully to: %s", req.Email)
+	ctx.JSON(http.StatusOK, gin.H{"message": "Test email sent successfully!"})
+}
