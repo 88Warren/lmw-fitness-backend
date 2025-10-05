@@ -25,6 +25,13 @@ type HealthResponse struct {
 	Database  DatabaseHealth      `json:"database"`
 	System    SystemHealth        `json:"system"`
 	Metrics   *middleware.Metrics `json:"metrics"`
+	Analytics AnalyticsHealth     `json:"analytics"`
+}
+
+type AnalyticsHealth struct {
+	GoogleAnalyticsID string `json:"google_analytics_id"`
+	TrackingEnabled   bool   `json:"tracking_enabled"`
+	CookieConsent     bool   `json:"cookie_consent_implemented"`
 }
 
 type DatabaseHealth struct {
@@ -64,6 +71,11 @@ func (mc *MonitoringController) HealthCheck(c *gin.Context) {
 		Database:  dbHealth,
 		System:    systemHealth,
 		Metrics:   metrics,
+		Analytics: AnalyticsHealth{
+			GoogleAnalyticsID:        "G-FVKJGWBKRN",
+			TrackingEnabled:          true,
+			CookieConsentImplemented: true,
+		},
 	}
 
 	statusCode := http.StatusOK

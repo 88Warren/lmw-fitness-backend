@@ -91,6 +91,7 @@ func SetupHandlers(router *gin.Engine, db *gorm.DB) {
 	newsletterController := controllers.NewNewsletterController(db)
 	workoutController := controllers.NewWorkoutController(db)
 	monitoringController := controllers.NewMonitoringController(db)
+	sitemapController := controllers.NewSitemapController(db)
 
 	routes.RegisterHomeRoutes(router, homeController)
 	routes.RegisterHealthRoutes(router, healthController)
@@ -100,6 +101,7 @@ func SetupHandlers(router *gin.Engine, db *gorm.DB) {
 	routes.RegisterNewsletterRoutes(router, newsletterController)
 	routes.RegisterWorkoutRoutes(router, workoutController)
 	routes.RegisterMonitoringRoutes(router, monitoringController)
+	routes.RegisterSitemapRoutes(router, sitemapController)
 
 	go func() {
 		workers.StartPaymentWorker(db, paymentController)

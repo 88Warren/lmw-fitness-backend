@@ -24,6 +24,18 @@ func BlogSeed(db *gorm.DB) {
 			ImageURL:   "https://images.pexels.com/photos/6185236/pexels-photo-6185236.jpeg?_gl=1*1auz0rg*_ga*MTM3OTk1NTgzOS4xNzU2MzI3MTY2*_ga_8JE65Q40S6*czE3NTc3NTQ2OTgkbzYkZzEkdDE3NTc3NTQ5MDYkajU3JGwwJGgw",
 		},
 		{
+			IsFeatured: true,
+			Category:   "Workouts",
+			FileName:   "home_workouts_for_women.html",
+			ImageURL:   "https://images.pexels.com/photos/4056723/pexels-photo-4056723.jpeg",
+		},
+		{
+			IsFeatured: true,
+			Category:   "Fitness Tips",
+			FileName:   "beginner_workout_mistakes.html",
+			ImageURL:   "https://images.pexels.com/photos/3768916/pexels-photo-3768916.jpeg",
+		},
+		{
 			IsFeatured: false,
 			Category:   "Nutrition",
 			FileName:   "nutrition_tips.html",
