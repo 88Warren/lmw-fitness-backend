@@ -72,9 +72,9 @@ func (mc *MonitoringController) HealthCheck(c *gin.Context) {
 		System:    systemHealth,
 		Metrics:   metrics,
 		Analytics: AnalyticsHealth{
-			GoogleAnalyticsID:        "G-FVKJGWBKRN",
-			TrackingEnabled:          true,
-			CookieConsentImplemented: true,
+			GoogleAnalyticsID: "G-FVKJGWBKRN",
+			TrackingEnabled:   true,
+			CookieConsent:     true,
 		},
 	}
 
