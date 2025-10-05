@@ -32,7 +32,7 @@ type SitemapURLSet struct {
 }
 
 func (sc *SitemapController) GenerateSitemap(c *gin.Context) {
-	baseURL := "https://www.lmwfitness.com"
+	baseURL := "https://www.lmwfitness.co.uk"
 	currentDate := time.Now().Format("2006-01-02")
 
 	// Static pages
