@@ -104,3 +104,7 @@ func RoleMiddleware(requiredRole string) gin.HandlerFunc {
 		ctx.Next()
 	}
 }
+
+func AdminMiddleware() gin.HandlerFunc {
+	return RoleMiddleware("admin")
+}
