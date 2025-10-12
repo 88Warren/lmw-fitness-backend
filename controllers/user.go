@@ -38,7 +38,7 @@ type VerifyTokenRequest struct {
 
 var (
 	hasUpperCase   = regexp.MustCompile(`[A-Z]`)
-	hasSpecialChar = regexp.MustCompile(`[!@#$^&*]`)
+	hasSpecialChar = regexp.MustCompile(`[!@#$%^&*()_\-+=[{\]};:'",<.>/?\\|` + "`" + `~]`)
 )
 
 func (uc *UserController) RegisterUser(ctx *gin.Context) {
@@ -580,7 +580,7 @@ func ValidatePassword(password string) error {
 	}
 
 	if !hasSpecialChar.MatchString(password) {
-		return fmt.Errorf("password must contain at least one special character (!@#$^&*)")
+		return fmt.Errorf("password must contain at least one special character (!@#$%%^&*()_-+=[]{}\\|;:'\",<.>/?`~)")
 	}
 
 	return nil
