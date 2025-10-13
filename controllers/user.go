@@ -79,6 +79,7 @@ func (uc *UserController) RegisterUser(ctx *gin.Context) {
 		CompletedDays:      make(map[string]int),
 		ProgramStartDates:  make(map[string]time.Time),
 		CompletedDaysList:  make(map[string][]int),
+		Timezone:           "UTC", // Default timezone, can be updated later
 	}
 
 	if result := uc.DB.Create(&user); result.Error != nil {
@@ -310,7 +311,7 @@ func (uc *UserController) GetProfile(ctx *gin.Context) {
 
 	unlockedDays := make(map[string]int)
 	for program, startDate := range programStartDates {
-		unlockedDays[program] = calculateUnlockedDays(startDate)
+		unlockedDays[program] = calculateUnlockedDays(startDate, user.Timezone)
 	}
 
 	// log.Printf("Final program list being sent to frontend: %v", programList)
@@ -325,18 +326,39 @@ func (uc *UserController) GetProfile(ctx *gin.Context) {
 		ProgramStartDates:  programStartDates,
 		CompletedDaysList:  completedDaysList,
 		UnlockedDays:       unlockedDays,
+		Timezone:           user.Timezone,
 	}
 
 	ctx.JSON(http.StatusOK, userResponse)
 }
 
-func calculateUnlockedDays(startDate time.Time) int {
+func calculateUnlockedDays(startDate time.Time, userTimezone string) int {
 	if startDate.IsZero() {
 		return 0
 	}
 
-	now := time.Now()
-	daysSinceStart := int(now.Sub(startDate).Hours() / 24)
+	// Default to UTC if timezone is not set or invalid
+	if userTimezone == "" {
+		userTimezone = "UTC"
+	}
+
+	// Load the user's timezone
+	loc, err := time.LoadLocation(userTimezone)
+	if err != nil {
+		// If timezone is invalid, fall back to UTC
+		loc = time.UTC
+	}
+
+	// Convert times to user's timezone
+	now := time.Now().In(loc)
+	startDateInUserTZ := startDate.In(loc)
+
+	// Get the start of the day (midnight) for both dates in user's timezone
+	startDay := time.Date(startDateInUserTZ.Year(), startDateInUserTZ.Month(), startDateInUserTZ.Day(), 0, 0, 0, 0, loc)
+	currentDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+
+	// Calculate the number of calendar days that have passed
+	daysSinceStart := int(currentDay.Sub(startDay).Hours() / 24)
 	unlockedDays := daysSinceStart + 1
 
 	if unlockedDays > 30 {
@@ -945,4 +967,44 @@ func (uc *UserController) TestEmail(ctx *gin.Context) {
 
 	log.Printf("Test email sent successfully to: %s", req.Email)
 	ctx.JSON(http.StatusOK, gin.H{"message": "Test email sent successfully!"})
+}
+func (uc *UserController) UpdateTimezone(ctx *gin.Context) {
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	var req struct {
+		Timezone string `json:"timezone" binding:"required"`
+	}
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate timezone
+	_, err := time.LoadLocation(req.Timezone)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid timezone"})
+		return
+	}
+
+	var user models.User
+	if result := uc.DB.First(&user, userID); result.Error != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user"})
+		return
+	}
+
+	user.Timezone = req.Timezone
+	if result := uc.DB.Save(&user); result.Error != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update timezone"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message":  "Timezone updated successfully",
+		"timezone": req.Timezone,
+	})
 }
