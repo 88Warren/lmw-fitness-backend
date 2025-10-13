@@ -18,6 +18,7 @@ type User struct {
 	CompletedDays       map[string]int       `json:"completedDays" gorm:"serializer:json"`
 	ProgramStartDates   map[string]time.Time `json:"programStartDates" gorm:"serializer:json"`
 	CompletedDaysList   map[string][]int     `json:"completedDaysList" gorm:"serializer:json"`
+	Timezone            string               `gorm:"default:'UTC'" json:"timezone"`
 }
 
 type UserResponse struct {
@@ -30,6 +31,7 @@ type UserResponse struct {
 	ProgramStartDates  map[string]time.Time `json:"programStartDates"`
 	CompletedDaysList  map[string][]int     `json:"completedDaysList"`
 	UnlockedDays       map[string]int       `json:"unlockedDays"`
+	Timezone           string               `json:"timezone"`
 }
 
 type LoginRequest struct {

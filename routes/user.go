@@ -24,5 +24,6 @@ func RegisterUserRoutes(router *gin.Engine, uc *controllers.UserController) {
 		authenticated.PUT("/change-password-first-login", uc.ChangePassword)
 		authenticated.POST("/set-first-time-password", uc.SetFirstTimePassword)
 		authenticated.GET("/profile", uc.GetProfile)
+		authenticated.PUT("/timezone", uc.UpdateTimezone)
 	}
 }

@@ -1,8 +1,11 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"strconv"
+	"strings"
 
 	"github.com/88warren/lmw-fitness-backend/models"
 	"github.com/gin-gonic/gin"
@@ -577,4 +580,169 @@ func (ac *AdminController) DeleteWorkoutExercise(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Workout exercise deleted successfully"})
+}
+
+// User Management
+func (ac *AdminController) GetAllUsers(c *gin.Context) {
+	var users []models.User
+	if err := ac.DB.Select("id, email, role, created_at, updated_at").Find(&users).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve users"})
+		return
+	}
+	c.JSON(http.StatusOK, users)
+}
+
+func (ac *AdminController) GetUser(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	var user models.User
+	if err := ac.DB.Select("id, email, role, created_at, updated_at").First(&user, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user"})
+		return
+	}
+	c.JSON(http.StatusOK, user)
+}
+
+func (ac *AdminController) UpdateUser(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	var user models.User
+	if err := ac.DB.First(&user, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user"})
+		return
+	}
+
+	var updateData struct {
+		Role     string `json:"role"`
+		IsActive *bool  `json:"isActive"`
+	}
+
+	if err := c.ShouldBindJSON(&updateData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Update only the fields that are provided
+	updates := make(map[string]interface{})
+	if updateData.Role != "" {
+		if updateData.Role != "user" && updateData.Role != "admin" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid role. Must be 'user' or 'admin'"})
+			return
+		}
+		updates["role"] = updateData.Role
+	}
+	if updateData.IsActive != nil {
+		updates["is_active"] = *updateData.IsActive
+	}
+
+	if err := ac.DB.Model(&user).Updates(updates).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+		return
+	}
+
+	// Return updated user data (excluding sensitive fields)
+	var updatedUser models.User
+	if err := ac.DB.Select("id, email, role, created_at, updated_at").First(&updatedUser, id).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve updated user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, updatedUser)
+}
+
+func (ac *AdminController) DeleteUser(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	// Check if user exists
+	var user models.User
+	if err := ac.DB.First(&user, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user"})
+		return
+	}
+
+	// Prevent deletion of the last admin user
+	if user.Role == "admin" {
+		var adminCount int64
+		ac.DB.Model(&models.User{}).Where("role = ?", "admin").Count(&adminCount)
+		if adminCount <= 1 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot delete the last admin user"})
+			return
+		}
+	}
+
+	if err := ac.DB.Delete(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
+		return
+	}
+
+	c.JSON(http.StatusNoContent, nil)
+}
+func (ac *AdminController) ResetUserPassword(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	// Check if user exists
+	var user models.User
+	if err := ac.DB.First(&user, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user"})
+		return
+	}
+
+	// Reuse the password reset logic by creating a UserController instance
+	userController := NewUserController(ac.DB)
+
+	// Create a mock request body with the user's email
+	mockBody := fmt.Sprintf(`{"email":"%s"}`, user.Email)
+	req, _ := http.NewRequest("POST", "/forgot-password", strings.NewReader(mockBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	// Create a response recorder and mock context
+	w := httptest.NewRecorder()
+	mockCtx, _ := gin.CreateTestContext(w)
+	mockCtx.Request = req
+
+	// Call the existing RequestPasswordReset method
+	userController.RequestPasswordReset(mockCtx)
+
+	// Check if the request was successful
+	if w.Code != http.StatusOK {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send password reset email"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Password reset email sent successfully",
+		"email":   user.Email,
+	})
 }

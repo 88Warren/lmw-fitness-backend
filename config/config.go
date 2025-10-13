@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/88warren/lmw-fitness-backend/controllers"
-	"github.com/88warren/lmw-fitness-backend/database"
 	"github.com/88warren/lmw-fitness-backend/middleware"
 	"github.com/88warren/lmw-fitness-backend/routes"
 	"github.com/88warren/lmw-fitness-backend/workers"
@@ -80,7 +79,8 @@ func SetupServer() *gin.Engine {
 }
 
 func SetupHandlers(router *gin.Engine, db *gorm.DB) {
-	database.SeedDB(db)
+	// Seed data commented out since CRUD operations are available
+	// database.SeedDB(db)
 	// log.Println("Database models auto-migrated successfully.")
 
 	homeController := controllers.NewHomeController(db)

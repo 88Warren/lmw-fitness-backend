@@ -39,5 +39,12 @@ func RegisterAdminRoutes(router *gin.Engine, ac *controllers.AdminController) {
 		admin.POST("/workout-exercises", ac.CreateWorkoutExercise)
 		admin.PUT("/workout-exercises/:id", ac.UpdateWorkoutExercise)
 		admin.DELETE("/workout-exercises/:id", ac.DeleteWorkoutExercise)
+
+		// User management
+		admin.GET("/users", ac.GetAllUsers)
+		admin.GET("/users/:id", ac.GetUser)
+		admin.PUT("/users/:id", ac.UpdateUser)
+		admin.DELETE("/users/:id", ac.DeleteUser)
+		admin.POST("/users/:id/reset-password", ac.ResetUserPassword)
 	}
 }
