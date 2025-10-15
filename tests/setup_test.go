@@ -13,22 +13,44 @@ var testDB *gorm.DB
 
 func TestMain(m *testing.M) {
 	os.Setenv("GO_ENV", "test")
-	os.Setenv("DB_HOST", "localhost")
-	os.Setenv("DB_USER", "postgres")
-	os.Setenv("DB_PASSWORD", "test")
-	os.Setenv("DB_NAME", "lmwfitness_test")
-	os.Setenv("DB_PORT", "5432")
-	os.Setenv("DB_SSLMODE", "disable")
+
+	// Use pipeline environment variables if available, otherwise use localhost for local testing
+	if os.Getenv("DB_HOST") == "" {
+		// Check if we're in CI/CD pipeline or local development
+		if os.Getenv("CI") != "" || os.Getenv("HARNESS_BUILD_ID") != "" {
+			os.Setenv("DB_HOST", "database")
+		} else {
+			os.Setenv("DB_HOST", "localhost")
+		}
+	}
+	if os.Getenv("DB_USER") == "" {
+		os.Setenv("DB_USER", "postgres")
+	}
+	if os.Getenv("DB_PASSWORD") == "" {
+		os.Setenv("DB_PASSWORD", "password")
+	}
+	if os.Getenv("DB_NAME") == "" {
+		os.Setenv("DB_NAME", "testdb")
+	}
+	if os.Getenv("DB_PORT") == "" {
+		os.Setenv("DB_PORT", "5432")
+	}
+	if os.Getenv("DB_SSLMODE") == "" {
+		os.Setenv("DB_SSLMODE", "disable")
+	}
 
 	database.InitLogger()
 	defer database.SyncLogger()
 
 	config.LoadEnv()
 
+	// Try to connect to database, but don't fail if it's not available locally
 	database.ConnectToDB()
 	testDB = database.GetDB()
 
-	database.MigrateDB()
+	if testDB != nil {
+		database.MigrateDB()
+	}
 
 	code := m.Run()
 
