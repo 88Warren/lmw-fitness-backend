@@ -14,6 +14,9 @@ var testDB *gorm.DB
 func TestMain(m *testing.M) {
 	os.Setenv("GO_ENV", "test")
 
+	// Setup test environment variables
+	SetupTestEnvironment()
+
 	// Use pipeline environment variables if available, otherwise use localhost for local testing
 	if os.Getenv("DB_HOST") == "" {
 		// Check if we're in CI/CD pipeline or local development

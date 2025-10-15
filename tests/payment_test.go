@@ -39,6 +39,10 @@ func TestCreateCheckoutSession(t *testing.T) {
 }
 
 func TestPaymentValidation(t *testing.T) {
+	if os.Getenv("STRIPE_SECRET_KEY") == "" {
+		t.Skip("Skipping Stripe test - no API key")
+	}
+
 	router := config.SetupServer()
 	paymentController := controllers.NewPaymentController(GetTestDB())
 	routes.RegisterPaymentRoutes(router, paymentController)
