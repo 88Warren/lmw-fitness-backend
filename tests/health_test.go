@@ -17,7 +17,7 @@ func TestHealthEndpoint(t *testing.T) {
 	healthController := controllers.NewHealthController(GetTestDB())
 	routes.RegisterHealthRoutes(router, healthController)
 
-	req, _ := http.NewRequest("GET", "/api/health", nil)
+	req, _ := http.NewRequest("GET", "/api/health/live", nil)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)
