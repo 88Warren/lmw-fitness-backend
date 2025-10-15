@@ -9,6 +9,11 @@ func SetupTestEnvironment() {
 		os.Setenv("STRIPE_SECRET_KEY", "sk_test_dummy_key_for_testing")
 	}
 
+	// Set Stripe webhook secret for testing
+	if os.Getenv("STRIPE_WEBHOOK_SECRET") == "" {
+		os.Setenv("STRIPE_WEBHOOK_SECRET", "whsec_test_dummy_webhook_secret_for_testing")
+	}
+
 	// Set other required environment variables
 	if os.Getenv("JWT_SECRET") == "" {
 		os.Setenv("JWT_SECRET", "test_jwt_secret_key_for_testing")
