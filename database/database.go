@@ -29,8 +29,18 @@ func ConnectToDB() {
 	// Configure GORM logger based on environment
 	var gormConfig *gorm.Config
 	if os.Getenv("GO_ENV") == "test" {
+		// Create a completely silent logger for tests
+		silentLogger := logger.New(
+			log.New(os.Stdout, "", log.LstdFlags),
+			logger.Config{
+				SlowThreshold:             time.Second,
+				LogLevel:                  logger.Silent,
+				IgnoreRecordNotFoundError: true,
+				Colorful:                  false,
+			},
+		)
 		gormConfig = &gorm.Config{
-			Logger: logger.Default.LogMode(logger.Silent),
+			Logger: silentLogger,
 		}
 	} else {
 		gormConfig = &gorm.Config{}
