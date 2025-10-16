@@ -34,6 +34,26 @@ func (wc *WorkoutController) GetWorkoutPrograms(c *gin.Context) {
 	c.JSON(http.StatusOK, programs)
 }
 
+func (wc *WorkoutController) GetWorkoutProgramByID(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid program ID"})
+		return
+	}
+
+	var program models.WorkoutProgram
+	if err := wc.DB.First(&program, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Program not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve program"})
+		return
+	}
+
+	c.JSON(http.StatusOK, program)
+}
+
 func (wc *WorkoutController) GetWorkoutDay(c *gin.Context) {
 	programID, err := strconv.Atoi(c.Param("programID"))
 	if err != nil {

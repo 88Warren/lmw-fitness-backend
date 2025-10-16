@@ -7,12 +7,16 @@ import (
 )
 
 func RegisterWorkoutRoutes(router *gin.Engine, wc *controllers.WorkoutController) {
+	// Public routes
 	router.GET("/api/workouts/programs", wc.GetWorkoutPrograms)
+	router.GET("/api/workouts/programs/:id", wc.GetWorkoutProgramByID)
 
+	// Authenticated routes
 	authenticated := router.Group("/api/workouts")
 	authenticated.Use(middleware.AuthMiddleware())
 	{
-		authenticated.GET("/programs/:programID/days/:dayNumber", wc.GetWorkoutDay)
+		// Use 'program' instead of 'programs' to avoid conflicts
+		authenticated.GET("/program/:programID/days/:dayNumber", wc.GetWorkoutDay)
 		authenticated.GET("/:programName/list", wc.GetProgramList)
 		authenticated.GET("/:programName/routines/warmup", wc.GetWarmup)
 		authenticated.GET("/:programName/routines/cooldown", wc.GetCooldown)
