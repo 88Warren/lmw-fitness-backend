@@ -48,11 +48,26 @@ func GetEnv(key string, fallback string) string {
 }
 
 func SetupServer() *gin.Engine {
-	router := gin.Default()
+	var router *gin.Engine
 
-	router.Use(middleware.StructuredLoggingMiddleware())
-	router.Use(middleware.MetricsMiddleware())
-	router.Use(middleware.MetricsCollectionMiddleware())
+	// Configure Gin based on environment - check multiple indicators for test environment
+	isTestEnv := os.Getenv("GO_ENV") == "test" ||
+		os.Getenv("CI") != "" ||
+		os.Getenv("HARNESS_BUILD_ID") != "" ||
+		os.Getenv("GITHUB_ACTIONS") != ""
+
+	if isTestEnv {
+		gin.SetMode(gin.ReleaseMode)
+		// Create router without default middleware to avoid duplicate warnings
+		router = gin.New()
+		// Only add recovery middleware for tests
+		router.Use(gin.Recovery())
+	} else {
+		router = gin.Default()
+		router.Use(middleware.StructuredLoggingMiddleware())
+		router.Use(middleware.MetricsMiddleware())
+		router.Use(middleware.MetricsCollectionMiddleware())
+	}
 
 	router.Use(middleware.CORSMiddleware())
 	router.Static("/images", "./images")
@@ -73,7 +88,10 @@ func SetupServer() *gin.Engine {
 	})
 	router.Use(middleware.DBMiddleware())
 
-	middleware.LogMetricsPeriodically()
+	// Only start metrics logging in non-test environments
+	if !isTestEnv {
+		middleware.LogMetricsPeriodically()
+	}
 
 	return router
 }
