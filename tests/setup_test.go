@@ -64,7 +64,17 @@ func TestMain(m *testing.M) {
 
 func cleanup() {
 	if testDB != nil {
-		testDB.Exec("TRUNCATE TABLE jobs, users, newsletters, blogs, workout_blocks, workouts, programs CASCADE")
+		// Clean up tables that exist, ignore errors for missing tables
+		tables := []string{"jobs", "users", "newsletters", "blogs", "workout_blocks", "workouts", "programs"}
+
+		for _, table := range tables {
+			// Check if table exists before trying to truncate
+			var exists bool
+			err := testDB.Raw("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = ?)", table).Scan(&exists).Error
+			if err == nil && exists {
+				testDB.Exec("TRUNCATE TABLE " + table + " CASCADE")
+			}
+		}
 	}
 }
 
