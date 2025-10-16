@@ -6,13 +6,22 @@ import (
 
 	"github.com/88warren/lmw-fitness-backend/config"
 	"github.com/88warren/lmw-fitness-backend/database"
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
 var testDB *gorm.DB
 
+func init() {
+	// Set Gin to release mode as early as possible
+	gin.SetMode(gin.ReleaseMode)
+}
+
 func TestMain(m *testing.M) {
 	os.Setenv("GO_ENV", "test")
+
+	// Set Gin to release mode immediately to prevent debug logs
+	gin.SetMode(gin.ReleaseMode)
 
 	// Setup test environment variables
 	SetupTestEnvironment()
