@@ -9,6 +9,7 @@ import (
 	"github.com/88warren/lmw-fitness-backend/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 var DB *gorm.DB
@@ -25,10 +26,30 @@ func ConnectToDB() {
 
 	// log.Printf("Attempting to connect to database at %s:%s", os.Getenv("DB_HOST"), os.Getenv("DB_PORT"))
 
+	// Configure GORM logger based on environment
+	var gormConfig *gorm.Config
+	if os.Getenv("GO_ENV") == "test" {
+		// Create a completely silent logger for tests
+		silentLogger := logger.New(
+			log.New(os.Stdout, "", log.LstdFlags),
+			logger.Config{
+				SlowThreshold:             time.Second,
+				LogLevel:                  logger.Silent,
+				IgnoreRecordNotFoundError: true,
+				Colorful:                  false,
+			},
+		)
+		gormConfig = &gorm.Config{
+			Logger: silentLogger,
+		}
+	} else {
+		gormConfig = &gorm.Config{}
+	}
+
 	var err error
 	maxRetries := 5
 	for i := 0; i < maxRetries; i++ {
-		DB, err = gorm.Open(postgres.Open(dns), &gorm.Config{})
+		DB, err = gorm.Open(postgres.Open(dns), gormConfig)
 		if err == nil {
 			// log.Println("Database connection established")
 			sqlDB, err := DB.DB()

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -40,6 +41,12 @@ func MetricsMiddleware() gin.HandlerFunc {
 		}
 
 		if c.Writer.Status() >= 400 {
+			// In test environment, don't log expected 401/400 errors to reduce noise
+			if os.Getenv("GO_ENV") == "test" && (c.Writer.Status() == 401 || c.Writer.Status() == 400) {
+				// Skip logging expected test errors
+				return
+			}
+
 			zap.L().Error("HTTP Error",
 				zap.String("method", c.Request.Method),
 				zap.String("path", c.Request.URL.Path),
