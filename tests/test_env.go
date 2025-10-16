@@ -34,4 +34,21 @@ func SetupTestEnvironment() {
 	if os.Getenv("SMTP_PASSWORD") == "" {
 		os.Setenv("SMTP_PASSWORD", "test_password")
 	}
+
+	// Set Stripe Price IDs for testing
+	if os.Getenv("ULTIMATE_MINDSET_PACKAGE_PRICE_ID") == "" {
+		os.Setenv("ULTIMATE_MINDSET_PACKAGE_PRICE_ID", "price_test_ultimate_mindset_package")
+	}
+
+	if os.Getenv("TAILORED_COACHING_PRICE_ID") == "" {
+		os.Setenv("TAILORED_COACHING_PRICE_ID", "price_test_tailored_coaching")
+	}
+
+	if os.Getenv("BEGINNER_PRICE_ID") == "" {
+		os.Setenv("BEGINNER_PRICE_ID", "price_test_beginner_package")
+	}
+
+	if os.Getenv("ADVANCED_PRICE_ID") == "" {
+		os.Setenv("ADVANCED_PRICE_ID", "price_test_advanced_package")
+	}
 }
