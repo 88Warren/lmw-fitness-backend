@@ -24,8 +24,13 @@ func TestCreateCheckoutSession(t *testing.T) {
 	routes.RegisterPaymentRoutes(router, paymentController)
 
 	requestBody := map[string]interface{}{
-		"priceId": "price_test_123",
-		"email":   "info@lmwfitness.co.uk",
+		"items": []map[string]interface{}{
+			{
+				"priceId":  "price_test_123",
+				"quantity": 1,
+			},
+		},
+		"customerEmail": "info@lmwfitness.co.uk",
 	}
 
 	jsonBody, _ := json.Marshal(requestBody)
@@ -35,6 +40,8 @@ func TestCreateCheckoutSession(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
+	// This should still return 400 because we're using a test Stripe key
+	// but now it won't fail on the binding validation
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
@@ -46,8 +53,10 @@ func TestPaymentValidation(t *testing.T) {
 	router := config.SetupServer()
 	paymentController := controllers.NewPaymentController(GetTestDB())
 	routes.RegisterPaymentRoutes(router, paymentController)
+
+	// Test with missing items (should fail validation)
 	requestBody := map[string]interface{}{
-		"priceId": "price_test_123",
+		"customerEmail": "test@example.com",
 	}
 
 	jsonBody, _ := json.Marshal(requestBody)
@@ -58,5 +67,5 @@ func TestPaymentValidation(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "email")
+	assert.Contains(t, w.Body.String(), "Items")
 }
