@@ -40,8 +40,8 @@ func TestCreateCheckoutSession(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	// With dummy Stripe key, this will return 500 due to Stripe API error
-	// This is expected behavior in test environment
+	// With dummy Stripe key, Stripe API returns 401 which causes internal server error (500)
+	// This is expected behavior in test environment with invalid API key
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
