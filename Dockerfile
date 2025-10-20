@@ -1,8 +1,5 @@
 # ---- Build Stage ----
-FROM golang:1.24-alpine3.21 AS builder
-
-ENV GOOS=linux
-ENV GOARCH=amd64
+FROM --platform=linux/amd64 golang:1.24-alpine3.21 AS builder
 
 WORKDIR /app
 
@@ -17,7 +14,7 @@ RUN go mod download
 COPY . .
 
 # Build the Go application for Ionis VPS
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main main.go
+RUN CGO_ENABLED=0 go build -o main main.go
 
 # ---- Final Stage ----
 FROM alpine:3.21
