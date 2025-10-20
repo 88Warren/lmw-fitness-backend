@@ -6,31 +6,48 @@ WORKDIR /app
 # Install build dependencies
 RUN apk add --no-cache gcc musl-dev
 
-# Install go dependencies
+# Install go dependencies first (for better caching)
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source code
-COPY . .
+# Copy only necessary source files
+COPY *.go ./
+COPY config/ ./config/
+COPY controllers/ ./controllers/
+COPY database/ ./database/
+COPY middleware/ ./middleware/
+COPY migrations/ ./migrations/
+COPY models/ ./models/
+COPY routes/ ./routes/
+COPY utils/ ./utils/
+COPY workers/ ./workers/
 
-# Build the Go application for Ionis VPS
-RUN CGO_ENABLED=0 go build -o main main.go
+# Build the Go application
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o main main.go
 
 # ---- Final Stage ----
 FROM alpine:3.21
 WORKDIR /app
 
-# Install runtime dependencies
-RUN apk add --no-cache ca-certificates tzdata netcat-openbsd
+# Install minimal runtime dependencies
+RUN apk add --no-cache ca-certificates tzdata && \
+    addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
 
 # Copy only the built binary from the builder stage
 COPY --from=builder /app/main .
 
-# Copy the images directory
-COPY --from=builder /app/images ./images
+# Copy the images directory (only if needed at runtime)
+COPY images/ ./images/
 
-# Copy the database content directory for blog seeding
-COPY --from=builder /app/database/content ./database/content
+# Copy the database content directory for blog seeding (only if needed at runtime)
+COPY database/content/ ./database/content/
+
+# Change ownership to non-root user
+RUN chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
 
 # Expose the application port
 EXPOSE 8082
