@@ -6,3 +6,11 @@ Dockerfile
 *.log
 build
 dist
+tmp/
+main
+.env.*
+.air.toml
+.DS_Store
+test-runner.sh
+tests/
+docker-compose.yml
