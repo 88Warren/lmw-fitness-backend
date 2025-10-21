@@ -23,10 +23,13 @@ COPY utils/ ./utils/
 COPY workers/ ./workers/
 
 # Build the Go application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o main main.go
+RUN CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64 \
+    go build -a -installsuffix cgo -ldflags="-w -s" -o main main.go
 
 # ---- Final Stage ----
-FROM alpine:3.21
+FROM --platform=linux/amd64 alpine:3.21
 WORKDIR /app
 
 # Install minimal runtime dependencies
