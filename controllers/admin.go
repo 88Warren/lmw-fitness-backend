@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/88warren/lmw-fitness-backend/models"
 	"github.com/gin-gonic/gin"
@@ -585,11 +586,72 @@ func (ac *AdminController) DeleteWorkoutExercise(c *gin.Context) {
 // User Management
 func (ac *AdminController) GetAllUsers(c *gin.Context) {
 	var users []models.User
-	if err := ac.DB.Select("id, email, role, created_at, updated_at").Find(&users).Error; err != nil {
+	if err := ac.DB.Preload("AuthTokens").Preload("UserPrograms.WorkoutProgram").Find(&users).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve users"})
 		return
 	}
-	c.JSON(http.StatusOK, users)
+
+	// Enhanced user data for admin monitoring
+	var enhancedUsers []map[string]interface{}
+	for _, user := range users {
+		// Calculate purchased programs from UserPrograms (consistent with user profile)
+		purchasedPrograms := make(map[string]bool)
+		for _, userProgram := range user.UserPrograms {
+			if userProgram.WorkoutProgram.Name != "" {
+				purchasedPrograms[userProgram.WorkoutProgram.Name] = true
+			}
+		}
+		programList := make([]string, 0, len(purchasedPrograms))
+		for program := range purchasedPrograms {
+			programList = append(programList, program)
+		}
+
+		// Calculate workout progress
+		totalCompletedDays := 0
+		for _, count := range user.CompletedDays {
+			totalCompletedDays += count
+		}
+
+		// Calculate account age
+		accountAge := time.Since(user.CreatedAt).Hours() / 24
+
+		// Determine user activity level
+		activityLevel := "New"
+		if totalCompletedDays > 0 {
+			activityLevel = "Active"
+		}
+		if totalCompletedDays > 10 {
+			activityLevel = "Regular"
+		}
+		if totalCompletedDays > 30 {
+			activityLevel = "Dedicated"
+		}
+
+		// Calculate last activity (approximation based on updated_at)
+		daysSinceLastActivity := time.Since(user.UpdatedAt).Hours() / 24
+
+		enhancedUser := map[string]interface{}{
+			"ID":                    user.ID,
+			"email":                 user.Email,
+			"role":                  user.Role,
+			"isActive":              true, // Default to true since we don't have this field
+			"CreatedAt":             user.CreatedAt,
+			"UpdatedAt":             user.UpdatedAt,
+			"lastLogin":             user.UpdatedAt, // Approximation
+			"purchasedPrograms":     programList,
+			"totalCompletedDays":    totalCompletedDays,
+			"accountAge":            int(accountAge),
+			"activityLevel":         activityLevel,
+			"daysSinceLastActivity": int(daysSinceLastActivity),
+			"timezone":              user.Timezone,
+			"mustChangePassword":    user.MustChangePassword,
+			"programCount":          len(programList),
+			"authTokenCount":        len(user.AuthTokens),
+		}
+		enhancedUsers = append(enhancedUsers, enhancedUser)
+	}
+
+	c.JSON(http.StatusOK, enhancedUsers)
 }
 
 func (ac *AdminController) GetUser(c *gin.Context) {
@@ -745,4 +807,192 @@ func (ac *AdminController) ResetUserPassword(c *gin.Context) {
 		"message": "Password reset email sent successfully",
 		"email":   user.Email,
 	})
+}
+
+// Analytics Dashboard
+func (ac *AdminController) GetAnalyticsDashboard(c *gin.Context) {
+	// Get time range from query params (default to last 30 days)
+	days := 30
+	if d := c.Query("days"); d != "" {
+		if parsed, err := strconv.Atoi(d); err == nil && parsed > 0 {
+			days = parsed
+		}
+	}
+
+	startDate := time.Now().AddDate(0, 0, -days)
+
+	// User Analytics
+	var totalUsers int64
+	var newUsers int64
+	var activeUsers int64
+	var adminUsers int64
+
+	ac.DB.Model(&models.User{}).Count(&totalUsers)
+	ac.DB.Model(&models.User{}).Where("created_at >= ?", startDate).Count(&newUsers)
+	ac.DB.Model(&models.User{}).Where("updated_at >= ?", startDate).Count(&activeUsers)
+	ac.DB.Model(&models.User{}).Where("role = ?", "admin").Count(&adminUsers)
+
+	// Program Analytics
+	var totalPrograms int64
+	var activePrograms int64
+	var totalWorkoutDays int64
+	var totalExercises int64
+
+	ac.DB.Model(&models.WorkoutProgram{}).Count(&totalPrograms)
+	ac.DB.Model(&models.WorkoutProgram{}).Where("is_active = ?", true).Count(&activePrograms)
+	ac.DB.Model(&models.WorkoutDay{}).Count(&totalWorkoutDays)
+	ac.DB.Model(&models.Exercise{}).Count(&totalExercises)
+
+	// Content Analytics
+	var totalBlogs int64
+	var featuredBlogs int64
+	var newsletterSubscribers int64
+	var confirmedSubscribers int64
+
+	ac.DB.Model(&models.Blog{}).Count(&totalBlogs)
+	ac.DB.Model(&models.Blog{}).Where("is_featured = ?", true).Count(&featuredBlogs)
+	ac.DB.Model(&models.NewsletterSubscriber{}).Count(&newsletterSubscribers)
+	ac.DB.Model(&models.NewsletterSubscriber{}).Where("is_confirmed = ?", true).Count(&confirmedSubscribers)
+
+	// User Registration Trends (last 7 days)
+	var registrationTrends []map[string]interface{}
+	for i := 6; i >= 0; i-- {
+		date := time.Now().AddDate(0, 0, -i)
+		startOfDay := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+		endOfDay := startOfDay.Add(24 * time.Hour)
+
+		var count int64
+		ac.DB.Model(&models.User{}).Where("created_at >= ? AND created_at < ?", startOfDay, endOfDay).Count(&count)
+
+		registrationTrends = append(registrationTrends, map[string]interface{}{
+			"date":  startOfDay.Format("2006-01-02"),
+			"count": count,
+		})
+	}
+
+	// Program Popularity
+	var programStats []map[string]interface{}
+	var programs []models.WorkoutProgram
+	ac.DB.Preload("Days").Find(&programs)
+
+	for _, program := range programs {
+		var userCount int64
+		ac.DB.Model(&models.UserProgram{}).Where("program_id = ?", program.ID).Count(&userCount)
+
+		programStats = append(programStats, map[string]interface{}{
+			"name":       program.Name,
+			"difficulty": program.Difficulty,
+			"duration":   program.Duration,
+			"userCount":  userCount,
+			"dayCount":   len(program.Days),
+			"isActive":   program.IsActive,
+		})
+	}
+
+	// User Activity Levels
+	var users []models.User
+	ac.DB.Find(&users)
+
+	activityLevels := map[string]int{
+		"New":       0,
+		"Active":    0,
+		"Regular":   0,
+		"Dedicated": 0,
+	}
+
+	for _, user := range users {
+		totalCompletedDays := 0
+		for _, count := range user.CompletedDays {
+			totalCompletedDays += count
+		}
+
+		if totalCompletedDays == 0 {
+			activityLevels["New"]++
+		} else if totalCompletedDays <= 10 {
+			activityLevels["Active"]++
+		} else if totalCompletedDays <= 30 {
+			activityLevels["Regular"]++
+		} else {
+			activityLevels["Dedicated"]++
+		}
+	}
+
+	// Exercise Category Distribution
+	var exerciseCategories []map[string]interface{}
+	rows, err := ac.DB.Model(&models.Exercise{}).
+		Select("category, COUNT(*) as count").
+		Group("category").
+		Rows()
+
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var category string
+			var count int64
+			rows.Scan(&category, &count)
+			exerciseCategories = append(exerciseCategories, map[string]interface{}{
+				"category": category,
+				"count":    count,
+			})
+		}
+	}
+
+	// Recent Activity (last 10 users)
+	var recentUsers []models.User
+	ac.DB.Order("created_at DESC").Limit(10).Find(&recentUsers)
+
+	var recentActivity []map[string]interface{}
+	for _, user := range recentUsers {
+		recentActivity = append(recentActivity, map[string]interface{}{
+			"email":     user.Email,
+			"role":      user.Role,
+			"createdAt": user.CreatedAt,
+			"timezone":  user.Timezone,
+		})
+	}
+
+	// System Health Metrics
+	systemHealth := map[string]interface{}{
+		"totalUsers":            totalUsers,
+		"totalPrograms":         totalPrograms,
+		"totalWorkoutDays":      totalWorkoutDays,
+		"totalExercises":        totalExercises,
+		"totalBlogs":            totalBlogs,
+		"newsletterSubscribers": newsletterSubscribers,
+		"databaseConnected":     true, // Since we're querying successfully
+		"lastUpdated":           time.Now(),
+	}
+
+	analytics := map[string]interface{}{
+		"overview": map[string]interface{}{
+			"totalUsers":            totalUsers,
+			"newUsers":              newUsers,
+			"activeUsers":           activeUsers,
+			"adminUsers":            adminUsers,
+			"totalPrograms":         totalPrograms,
+			"activePrograms":        activePrograms,
+			"totalWorkoutDays":      totalWorkoutDays,
+			"totalExercises":        totalExercises,
+			"totalBlogs":            totalBlogs,
+			"featuredBlogs":         featuredBlogs,
+			"newsletterSubscribers": newsletterSubscribers,
+			"confirmedSubscribers":  confirmedSubscribers,
+		},
+		"trends": map[string]interface{}{
+			"registrationTrends": registrationTrends,
+			"timeRange":          fmt.Sprintf("Last %d days", days),
+		},
+		"programs": map[string]interface{}{
+			"programStats":   programStats,
+			"activityLevels": activityLevels,
+		},
+		"content": map[string]interface{}{
+			"exerciseCategories": exerciseCategories,
+			"recentActivity":     recentActivity,
+		},
+		"system":      systemHealth,
+		"generatedAt": time.Now(),
+	}
+
+	c.JSON(http.StatusOK, analytics)
 }

@@ -126,7 +126,7 @@ func (uc *UserController) LoginUser(ctx *gin.Context) {
 	normalizedEmail := strings.ToLower(strings.TrimSpace(req.Email))
 
 	var user models.User
-	if result := uc.DB.Preload("AuthTokens").Where("LOWER(email) = ?", normalizedEmail).First(&user); result.Error != nil {
+	if result := uc.DB.Preload("AuthTokens").Preload("UserPrograms.WorkoutProgram").Where("LOWER(email) = ?", normalizedEmail).First(&user); result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 			return
@@ -163,10 +163,11 @@ func (uc *UserController) LoginUser(ctx *gin.Context) {
 
 	// log.Printf("Login successful for user: %s", req.Email)
 
+	// Get purchased programs from UserPrograms (consistent with profile)
 	purchasedPrograms := make(map[string]bool)
-	for _, token := range user.AuthTokens {
-		if token.ProgramName != "" {
-			purchasedPrograms[token.ProgramName] = true
+	for _, userProgram := range user.UserPrograms {
+		if userProgram.WorkoutProgram.Name != "" {
+			purchasedPrograms[userProgram.WorkoutProgram.Name] = true
 		}
 	}
 
@@ -234,16 +235,16 @@ func (uc *UserController) RefreshToken(ctx *gin.Context) {
 
 	// Get fresh user data
 	var user models.User
-	if err := uc.DB.Preload("AuthTokens").First(&user, userID).Error; err != nil {
+	if err := uc.DB.Preload("UserPrograms.WorkoutProgram").First(&user, userID).Error; err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user data"})
 		return
 	}
 
-	// Get purchased programs
+	// Get purchased programs from UserPrograms (consistent with profile)
 	purchasedPrograms := make(map[string]bool)
-	for _, authToken := range user.AuthTokens {
-		if !authToken.IsUsed {
-			purchasedPrograms[authToken.ProgramName] = true
+	for _, userProgram := range user.UserPrograms {
+		if userProgram.WorkoutProgram.Name != "" {
+			purchasedPrograms[userProgram.WorkoutProgram.Name] = true
 		}
 	}
 
@@ -880,15 +881,17 @@ func (uc *UserController) SetFirstTimePassword(ctx *gin.Context) {
 	}
 
 	var updatedUser models.User
-	if result := uc.DB.Preload("AuthTokens").First(&updatedUser, user.ID); result.Error != nil {
+	if result := uc.DB.Preload("UserPrograms.WorkoutProgram").First(&updatedUser, user.ID); result.Error != nil {
 		log.Printf("Error preloading user data: %v", result.Error)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve updated user data."})
 		return
 	}
 
 	purchasedPrograms := make(map[string]bool)
-	for _, token := range updatedUser.AuthTokens {
-		purchasedPrograms[token.ProgramName] = true
+	for _, userProgram := range updatedUser.UserPrograms {
+		if userProgram.WorkoutProgram.Name != "" {
+			purchasedPrograms[userProgram.WorkoutProgram.Name] = true
+		}
 	}
 
 	programList := make([]string, 0, len(purchasedPrograms))
