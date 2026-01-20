@@ -91,6 +91,7 @@ func MigrateDB() {
 		&models.Exercise{},
 		&models.WorkoutExercise{},
 		&models.UserWorkoutSession{},
+		&models.FitnessAssessment{},
 	)
 
 	if err != nil {

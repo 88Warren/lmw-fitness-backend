@@ -83,3 +83,18 @@ type UserWorkoutSession struct {
 	Status        string `gorm:"default:in_progress"`
 	CompletedDate *time.Time
 }
+
+type FitnessAssessment struct {
+	gorm.Model
+	UserID       uint      `gorm:"not null" json:"userId"`
+	ProgramName  string    `gorm:"not null" json:"programName"`
+	DayNumber    int       `gorm:"not null" json:"dayNumber"`
+	ExerciseID   uint      `gorm:"not null" json:"exerciseId"`
+	ExerciseName string    `gorm:"not null" json:"exerciseName"`
+	Reps         *int      `json:"reps"`        // For rep-based exercises
+	TimeSeconds  *int      `json:"timeSeconds"` // For time-based exercises (like plank hold)
+	Notes        string    `json:"notes"`
+	RecordedDate time.Time `gorm:"not null" json:"recordedDate"`
+	User         User      `gorm:"foreignKey:UserID" json:"-"`
+	Exercise     Exercise  `gorm:"foreignKey:ExerciseID" json:"exercise"`
+}
