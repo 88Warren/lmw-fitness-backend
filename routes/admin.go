@@ -11,6 +11,9 @@ func RegisterAdminRoutes(router *gin.Engine, ac *controllers.AdminController) {
 	admin.Use(middleware.AuthMiddleware())
 	admin.Use(middleware.AdminMiddleware()) // We'll need to create this middleware
 	{
+		// Analytics dashboard
+		admin.GET("/analytics", ac.GetAnalyticsDashboard)
+
 		// Exercise management
 		admin.GET("/exercises", ac.GetAllExercises)
 		admin.GET("/exercises/:id", ac.GetExercise)
