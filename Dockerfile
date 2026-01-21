@@ -1,5 +1,5 @@
 # ---- Build Stage ----
-FROM --platform=linux/amd64 golang:1.24-alpine3.21 AS builder
+FROM golang:1.24-alpine3.21 AS builder
 
 WORKDIR /app
 
@@ -25,11 +25,10 @@ COPY workers/ ./workers/
 # Build the Go application
 RUN CGO_ENABLED=0 \
     GOOS=linux \
-    GOARCH=amd64 \
     go build -a -installsuffix cgo -ldflags="-w -s" -o main main.go
 
 # ---- Final Stage ----
-FROM --platform=linux/amd64 alpine:3.21
+FROM alpine:3.21
 WORKDIR /app
 
 # Install minimal runtime dependencies

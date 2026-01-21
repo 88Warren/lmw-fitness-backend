@@ -3,6 +3,10 @@ dist
 dist-ssr
 *.local
 
+# Compiled binaries
+main
+*.exe
+
 # Editor directories and files
 .vscode/*
 
