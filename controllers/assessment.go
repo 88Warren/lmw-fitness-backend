@@ -289,6 +289,101 @@ func (ac *AssessmentController) GetProgramAssessments(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// GetDay1Assessment gets Day 1 assessment for a specific exercise to show during Day 30
+func (ac *AssessmentController) GetDay1Assessment(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	programName := c.Param("programName")
+	exerciseIDStr := c.Param("exerciseId")
+
+	exerciseID, err := strconv.Atoi(exerciseIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid exercise ID"})
+		return
+	}
+
+	var assessment models.FitnessAssessment
+	if err := ac.DB.Where("user_id = ? AND program_name = ? AND day_number = ? AND exercise_id = ?",
+		userID, programName, 1, exerciseID).First(&assessment).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Day 1 assessment not found for this exercise"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve Day 1 assessment"})
+		return
+	}
+
+	response := AssessmentResponse{
+		ID:           assessment.ID,
+		ProgramName:  assessment.ProgramName,
+		DayNumber:    assessment.DayNumber,
+		ExerciseID:   assessment.ExerciseID,
+		ExerciseName: assessment.ExerciseName,
+		Reps:         assessment.Reps,
+		TimeSeconds:  assessment.TimeSeconds,
+		Notes:        assessment.Notes,
+		RecordedDate: assessment.RecordedDate,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// GetAllDay1Assessments gets all Day 1 assessments for debugging (admin only)
+func (ac *AssessmentController) GetAllDay1Assessments(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Get user to check if admin
+	var user models.User
+	if err := ac.DB.First(&user, userID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get user"})
+		return
+	}
+
+	if user.Role != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
+		return
+	}
+
+	var assessments []models.FitnessAssessment
+	if err := ac.DB.Where("day_number = ?", 1).
+		Preload("User").
+		Order("created_at DESC").
+		Find(&assessments).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve Day 1 assessments"})
+		return
+	}
+
+	// Convert to response format with user info
+	var response []map[string]interface{}
+	for _, assessment := range assessments {
+		response = append(response, map[string]interface{}{
+			"id":           assessment.ID,
+			"userEmail":    assessment.User.Email,
+			"programName":  assessment.ProgramName,
+			"dayNumber":    assessment.DayNumber,
+			"exerciseId":   assessment.ExerciseID,
+			"exerciseName": assessment.ExerciseName,
+			"reps":         assessment.Reps,
+			"timeSeconds":  assessment.TimeSeconds,
+			"notes":        assessment.Notes,
+			"recordedDate": assessment.RecordedDate,
+		})
+	}
+
+	c.JSON(http.StatusOK, map[string]interface{}{
+		"count":       len(response),
+		"assessments": response,
+	})
+}
+
 // DeleteAssessment deletes a specific assessment
 func (ac *AssessmentController) DeleteAssessment(c *gin.Context) {
 	userID, exists := c.Get("userID")

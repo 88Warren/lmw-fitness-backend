@@ -23,6 +23,12 @@ func RegisterAssessmentRoutes(router *gin.Engine, ac *controllers.AssessmentCont
 		// Get assessments for specific program and day
 		authenticated.GET("/:programName/day/:dayNumber", ac.GetProgramAssessments)
 
+		// Get Day 1 assessment for specific exercise (for Day 30 comparison)
+		authenticated.GET("/:programName/exercise/:exerciseId/day1", ac.GetDay1Assessment)
+
+		// Debug endpoint to see all Day 1 assessments (admin only)
+		authenticated.GET("/debug/day1/all", ac.GetAllDay1Assessments)
+
 		// Delete specific assessment
 		authenticated.DELETE("/:id", ac.DeleteAssessment)
 	}
