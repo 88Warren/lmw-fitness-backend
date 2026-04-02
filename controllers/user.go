@@ -328,6 +328,10 @@ func (uc *UserController) GetProfile(ctx *gin.Context) {
 		CompletedDaysList:  completedDaysList,
 		UnlockedDays:       unlockedDays,
 		Timezone:           user.Timezone,
+		LastWorkoutDate:    user.LastWorkoutDate,
+		CurrentStreak:      user.CurrentStreak,
+		LongestStreak:      user.LongestStreak,
+		ReminderOptOut:     user.ReminderOptOut,
 	}
 
 	ctx.JSON(http.StatusOK, userResponse)
@@ -1009,5 +1013,38 @@ func (uc *UserController) UpdateTimezone(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"message":  "Timezone updated successfully",
 		"timezone": req.Timezone,
+	})
+}
+
+func (uc *UserController) UpdateReminderOptOut(ctx *gin.Context) {
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	var req struct {
+		OptOut bool `json:"optOut"`
+	}
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var user models.User
+	if result := uc.DB.First(&user, userID); result.Error != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user"})
+		return
+	}
+
+	user.ReminderOptOut = req.OptOut
+	if result := uc.DB.Save(&user); result.Error != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update preference"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"message":        "Reminder preference updated",
+		"reminderOptOut": req.OptOut,
 	})
 }

@@ -317,15 +317,49 @@ func (wc *WorkoutController) CompleteWorkoutDay(c *gin.Context) {
 		user.CompletedDays[req.ProgramName] = req.DayNumber
 	}
 
+	// Update streak
+	now := time.Now()
+	if user.LastWorkoutDate == nil {
+		// First ever workout
+		user.CurrentStreak = 1
+	} else {
+		// Get user's local date for both last workout and today
+		loc, err := time.LoadLocation(user.Timezone)
+		if err != nil {
+			loc = time.UTC
+		}
+		lastDate := user.LastWorkoutDate.In(loc)
+		today := now.In(loc)
+		lastDay := time.Date(lastDate.Year(), lastDate.Month(), lastDate.Day(), 0, 0, 0, 0, loc)
+		todayDay := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, loc)
+		diff := todayDay.Sub(lastDay).Hours() / 24
+
+		if diff == 0 {
+			// Already worked out today — streak unchanged
+		} else if diff == 1 {
+			// Consecutive day — extend streak
+			user.CurrentStreak++
+		} else {
+			// Gap — reset streak
+			user.CurrentStreak = 1
+		}
+	}
+	user.LastWorkoutDate = &now
+	if user.CurrentStreak > user.LongestStreak {
+		user.LongestStreak = user.CurrentStreak
+	}
+
 	if err := wc.DB.Save(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user completion status"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":      "Workout day completed successfully",
-		"completedDay": req.DayNumber,
-		"programName":  req.ProgramName,
+		"message":       "Workout day completed successfully",
+		"completedDay":  req.DayNumber,
+		"programName":   req.ProgramName,
+		"currentStreak": user.CurrentStreak,
+		"longestStreak": user.LongestStreak,
 	})
 }
 

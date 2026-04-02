@@ -45,6 +45,7 @@ type WorkoutExercise struct {
 	ExerciseID    uint         `gorm:"not null" json:"exerciseId"`
 	Order         int          `gorm:"not null" json:"order"`
 	Reps          string       `json:"reps"`
+	ModifiedReps  string       `json:"modifiedReps"`
 	Duration      string       `json:"duration"`
 	WorkRestRatio string       `json:"workRestRatio"`
 	Rest          string       `json:"rest"`
@@ -82,6 +83,20 @@ type UserWorkoutSession struct {
 	WorkoutDayID  uint
 	Status        string `gorm:"default:in_progress"`
 	CompletedDate *time.Time
+}
+
+type AMRAPScore struct {
+	gorm.Model
+	UserID       uint      `gorm:"not null" json:"userId"`
+	BlockID      uint      `gorm:"not null" json:"blockId"`
+	ProgramName  string    `gorm:"not null" json:"programName"`
+	DayNumber    int       `gorm:"not null" json:"dayNumber"`
+	BlockIndex   int       `gorm:"not null" json:"blockIndex"`
+	Rounds       int       `gorm:"not null" json:"rounds"`
+	PartialReps  int       `json:"partialReps"`
+	Notes        string    `json:"notes"`
+	RecordedDate time.Time `gorm:"not null" json:"recordedDate"`
+	User         User      `gorm:"foreignKey:UserID" json:"-"`
 }
 
 type FitnessAssessment struct {

@@ -128,7 +128,7 @@ func (ac *AdminController) GetProgram(c *gin.Context) {
 	}
 
 	var program models.WorkoutProgram
-	if err := ac.DB.Preload("Days.WorkoutBlocks.Exercises.Exercise").First(&program, id).Error; err != nil {
+	if err := ac.DB.Preload("Days.WorkoutBlocks.Exercises.Exercise.Modification").First(&program, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Program not found"})
 			return
@@ -265,6 +265,7 @@ func (ac *AdminController) CreateWorkoutDay(c *gin.Context) {
 				ExerciseID:    exerciseData.ExerciseID,
 				Order:         exerciseData.Order,
 				Reps:          exerciseData.Reps,
+				ModifiedReps:  exerciseData.ModifiedReps,
 				Duration:      exerciseData.Duration,
 				WorkRestRatio: exerciseData.WorkRestRatio,
 				Rest:          exerciseData.Rest,
@@ -289,7 +290,7 @@ func (ac *AdminController) CreateWorkoutDay(c *gin.Context) {
 	// Fetch the created workout day with all relations
 	var createdWorkoutDay models.WorkoutDay
 	if err := ac.DB.Where("id = ?", workoutDay.ID).
-		Preload("WorkoutBlocks.Exercises.Exercise").
+		Preload("WorkoutBlocks.Exercises.Exercise.Modification").
 		First(&createdWorkoutDay).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch created workout day"})
 		return
@@ -398,6 +399,7 @@ func (ac *AdminController) UpdateWorkoutDay(c *gin.Context) {
 				ExerciseID:    exerciseData.ExerciseID,
 				Order:         exerciseData.Order,
 				Reps:          exerciseData.Reps,
+				ModifiedReps:  exerciseData.ModifiedReps,
 				Duration:      exerciseData.Duration,
 				WorkRestRatio: exerciseData.WorkRestRatio,
 				Rest:          exerciseData.Rest,
@@ -422,7 +424,7 @@ func (ac *AdminController) UpdateWorkoutDay(c *gin.Context) {
 	// Fetch the updated workout day with all relations
 	var updatedWorkoutDay models.WorkoutDay
 	if err := ac.DB.Where("id = ?", workoutDay.ID).
-		Preload("WorkoutBlocks.Exercises.Exercise").
+		Preload("WorkoutBlocks.Exercises.Exercise.Modification").
 		First(&updatedWorkoutDay).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch updated workout day"})
 		return
