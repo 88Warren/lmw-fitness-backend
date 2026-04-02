@@ -1,16 +1,35 @@
-node_modules
-.git
-.gitignore
-Dockerfile
 *.md
 *.log
-build
-dist
 tmp/
-main
-.env.*
 .air.toml
 .DS_Store
 test-runner.sh
 tests/
 docker-compose.yml
+
+# Git
+.git
+.gitignore
+
+# Local Environment / Secrets
+.env.*
+*.env
+auth_key.json
+
+# Go Binaries & Cache
+bin/
+main
+*.exe
+vendor/
+
+# Frontend
+node_modules/
+build/
+dist/
+
+# Docker / IDE
+Dockerfile
+.dockerignore
+.vscode/
+.idea/
+*.swp

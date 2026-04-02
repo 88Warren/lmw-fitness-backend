@@ -25,5 +25,6 @@ func RegisterUserRoutes(router *gin.Engine, uc *controllers.UserController) {
 		authenticated.POST("/set-first-time-password", uc.SetFirstTimePassword)
 		authenticated.GET("/profile", uc.GetProfile)
 		authenticated.PUT("/timezone", uc.UpdateTimezone)
+		authenticated.PUT("/reminder-opt-out", uc.UpdateReminderOptOut)
 	}
 }

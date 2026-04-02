@@ -3,6 +3,8 @@ FROM golang:1.25.8-alpine3.21 AS builder
 
 WORKDIR /app
 
+ENV GOTOOLCHAIN=auto
+
 # Install build dependencies
 RUN apk add --no-cache gcc musl-dev
 

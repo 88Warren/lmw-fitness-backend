@@ -111,6 +111,8 @@ func SetupHandlers(router *gin.Engine, db *gorm.DB) {
 	monitoringController := controllers.NewMonitoringController(db)
 	sitemapController := controllers.NewSitemapController(db)
 	adminController := controllers.NewAdminController(db)
+	assessmentController := controllers.NewAssessmentController(db)
+	amrapController := controllers.NewAMRAPController(db)
 
 	routes.RegisterHomeRoutes(router, homeController)
 	routes.RegisterHealthRoutes(router, healthController)
@@ -122,8 +124,14 @@ func SetupHandlers(router *gin.Engine, db *gorm.DB) {
 	routes.RegisterMonitoringRoutes(router, monitoringController)
 	routes.RegisterSitemapRoutes(router, sitemapController)
 	routes.RegisterAdminRoutes(router, adminController)
+	routes.RegisterAssessmentRoutes(router, assessmentController)
+	routes.RegisterAMRAPRoutes(router, amrapController)
 
 	go func() {
 		workers.StartPaymentWorker(db, paymentController)
+	}()
+
+	go func() {
+		workers.StartReminderWorker(db)
 	}()
 }
